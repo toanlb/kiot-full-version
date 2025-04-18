@@ -6,6 +6,7 @@ use Yii;
 use yii\db\ActiveRecord;
 use yii\behaviors\TimestampBehavior;
 use yii\db\Expression;
+use yii\ArrayHelper;
 
 /**
  * This is the model class for table "product_unit".
@@ -175,5 +176,16 @@ class ProductUnit extends ActiveRecord
         }
         
         return \yii\helpers\ArrayHelper::map($query->all(), 'id', 'name');
+    }
+
+    /**
+     * Lấy danh sách đơn vị tính dưới dạng mảng key-value (id => name)
+     * @return array
+     */
+    public static function getList()
+    {
+        $units = self::find()->orderBy(['is_default' => SORT_DESC, 'name' => SORT_ASC])->all();
+        
+        return ArrayHelper::map($units, 'id', 'name');
     }
 }

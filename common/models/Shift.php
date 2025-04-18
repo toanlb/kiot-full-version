@@ -328,4 +328,5 @@ class Shift extends ActiveRecord
             
         return $details;
     }
+    
 }

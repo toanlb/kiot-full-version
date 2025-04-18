@@ -65,5 +65,5 @@ return [
             ],
         ],
     ],
-    'layout' => '@hail812/adminlte3/views/layouts/main',
+    'layout' => 'main',
 ];

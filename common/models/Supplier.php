@@ -7,6 +7,7 @@ use yii\db\ActiveRecord;
 use yii\behaviors\TimestampBehavior;
 use yii\behaviors\BlameableBehavior;
 use yii\db\Expression;
+use yii\helpers\ArrayHelper;
 
 /**
  * This is the model class for table "supplier".
@@ -234,6 +235,23 @@ class Supplier extends ActiveRecord
             self::STATUS_INACTIVE => 'Không hoạt động',
             self::STATUS_ACTIVE => 'Hoạt động',
         ];
+    }
+    /**
+     * Lấy danh sách nhà cung cấp dưới dạng mảng key-value (id => name)
+     * @param bool $onlyActive Chỉ lấy nhà cung cấp hoạt động
+     * @return array
+     */
+    public static function getList($onlyActive = true)
+    {
+        $query = self::find();
+        
+        if ($onlyActive) {
+            $query->where(['status' => 1]);
+        }
+        
+        $suppliers = $query->orderBy(['name' => SORT_ASC])->all();
+        
+        return ArrayHelper::map($suppliers, 'id', 'name');
     }
 
     /**

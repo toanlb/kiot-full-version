@@ -4,6 +4,7 @@ namespace common\models;
 
 use Yii;
 use yii\base\Model;
+use common\models\LoginHistory;
 
 /**
  * Login form
@@ -15,7 +16,6 @@ class LoginForm extends Model
     public $rememberMe = true;
 
     private $_user;
-
 
     /**
      * {@inheritdoc}
@@ -43,8 +43,14 @@ class LoginForm extends Model
     {
         if (!$this->hasErrors()) {
             $user = $this->getUser();
+
             if (!$user || !$user->validatePassword($this->password)) {
                 $this->addError($attribute, 'Incorrect username or password.');
+                
+                // Log failed login attempt if user exists
+                if ($user) {
+                    LoginHistory::logFailedLogin($user->id, 'Incorrect password');
+                }
             }
         }
     }
@@ -57,7 +63,19 @@ class LoginForm extends Model
     public function login()
     {
         if ($this->validate()) {
-            return Yii::$app->user->login($this->getUser(), $this->rememberMe ? 3600 * 24 * 30 : 0);
+            $user = $this->getUser();
+            $login = Yii::$app->user->login($this->getUser(), $this->rememberMe ? 3600 * 24 * 30 : 0);
+            
+            if ($login) {
+                // Log successful login
+                LoginHistory::logSuccessfulLogin($user->id);
+                
+                // Update last login time
+                $user->last_login_at = new \yii\db\Expression('NOW()');
+                $user->save(false);
+                
+                return true;
+            }
         }
         
         return false;

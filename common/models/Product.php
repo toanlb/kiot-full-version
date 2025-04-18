@@ -7,6 +7,7 @@ use yii\db\ActiveRecord;
 use yii\behaviors\TimestampBehavior;
 use yii\behaviors\BlameableBehavior;
 use yii\db\Expression;
+use yii\helpers\ArrayHelper;
 
 /**
  * This is the model class for table "product".
@@ -181,6 +182,26 @@ class Product extends ActiveRecord
     public function getProductBatches()
     {
         return $this->hasMany(ProductBatch::class, ['product_id' => 'id']);
+    }
+
+    /**
+     * Lấy danh sách sản phẩm dưới dạng mảng key-value (id => name)
+     * @param bool $onlyActive Chỉ lấy sản phẩm hoạt động
+     * @return array
+     */
+    public static function getList($onlyActive = true)
+    {
+        $query = self::find();
+        
+        if ($onlyActive) {
+            $query->where(['status' => 1]);
+        }
+        
+        $products = $query->orderBy(['name' => SORT_ASC])->all();
+        
+        return ArrayHelper::map($products, 'id', function($model) {
+            return $model->code . ' - ' . $model->name;
+        });
     }
 
     /**

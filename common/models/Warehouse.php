@@ -7,6 +7,7 @@ use yii\db\ActiveRecord;
 use yii\behaviors\TimestampBehavior;
 use yii\behaviors\BlameableBehavior;
 use yii\db\Expression;
+use yii\helpers\ArrayHelper;
 
 /**
  * This is the model class for table "warehouse".
@@ -233,6 +234,24 @@ class Warehouse extends ActiveRecord
     public function getUsers()
     {
         return $this->hasMany(User::class, ['warehouse_id' => 'id']);
+    }
+
+    /**
+     * Lấy danh sách kho hàng dưới dạng mảng key-value (id => name)
+     * @param bool $onlyActive Chỉ lấy kho hàng hoạt động
+     * @return array
+     */
+    public static function getList($onlyActive = true)
+    {
+        $query = self::find();
+        
+        if ($onlyActive) {
+            $query->where(['is_active' => 1]);
+        }
+        
+        $warehouses = $query->orderBy(['is_default' => SORT_DESC, 'name' => SORT_ASC])->all();
+        
+        return ArrayHelper::map($warehouses, 'id', 'name');
     }
 
     /**

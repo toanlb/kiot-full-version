@@ -7,6 +7,7 @@ use yii\base\NotSupportedException;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveRecord;
 use yii\web\IdentityInterface;
+use yii\helpers\ArrayHelper;
 
 /**
  * User model
@@ -49,6 +50,21 @@ class User extends ActiveRecord implements IdentityInterface
     const STATUS_ACTIVE = 10;
 
     /**
+     * @var string Mật khẩu mới
+     */
+    public $password;
+    
+    /**
+     * @var array Vai trò người dùng
+     */
+    private $_roles;
+    
+    /**
+     * @var array Kho được phép truy cập
+     */
+    private $_warehouses;
+
+    /**
      * {@inheritdoc}
      */
     public static function tableName()
@@ -74,7 +90,7 @@ class User extends ActiveRecord implements IdentityInterface
         return [
             ['status', 'default', 'value' => self::STATUS_ACTIVE],
             ['status', 'in', 'range' => [self::STATUS_ACTIVE, self::STATUS_INACTIVE, self::STATUS_DELETED]],
-            [['username', 'auth_key', 'password_hash', 'email', 'full_name'], 'required'],
+            [['username', 'email', 'full_name'], 'required'],
             [['status', 'created_at', 'updated_at', 'warehouse_id'], 'integer'],
             [['last_login_at'], 'safe'],
             [['username', 'password_hash', 'password_reset_token', 'email', 'verification_token', 'full_name', 'avatar'], 'string', 'max' => 255],
@@ -84,6 +100,8 @@ class User extends ActiveRecord implements IdentityInterface
             [['email'], 'unique'],
             [['password_reset_token'], 'unique'],
             [['warehouse_id'], 'exist', 'skipOnError' => true, 'targetClass' => Warehouse::class, 'targetAttribute' => ['warehouse_id' => 'id']],
+            // Thêm các trường an toàn cho form input
+            [['password', 'roles', 'warehouses'], 'safe'],
         ];
     }
 
@@ -108,6 +126,9 @@ class User extends ActiveRecord implements IdentityInterface
             'avatar' => 'Ảnh đại diện',
             'warehouse_id' => 'Kho mặc định',
             'last_login_at' => 'Lần đăng nhập cuối',
+            'password' => 'Mật khẩu',
+            'roles' => 'Vai trò người dùng',
+            'warehouses' => 'Kho được phép truy cập',
         ];
     }
 
@@ -232,6 +253,25 @@ class User extends ActiveRecord implements IdentityInterface
         $this->password_hash = Yii::$app->security->generatePasswordHash($password);
     }
 
+
+    /**
+     * Lấy danh sách người dùng dưới dạng mảng key-value (id => full_name)
+     * @param bool $onlyActive Chỉ lấy người dùng hoạt động
+     * @return array
+     */
+    public static function getList($onlyActive = true)
+    {
+        $query = self::find();
+        
+        if ($onlyActive) {
+            $query->where(['status' => 10]); // Status 10 thường là status active
+        }
+        
+        $users = $query->orderBy(['full_name' => SORT_ASC])->all();
+        
+        return ArrayHelper::map($users, 'id', 'full_name');
+    }
+
     /**
      * Generates "remember me" authentication key
      */
@@ -270,8 +310,92 @@ class User extends ActiveRecord implements IdentityInterface
      */
     public function getRoles()
     {
-        $roles = Yii::$app->authManager->getRolesByUser($this->id);
-        return array_keys($roles);
+        if ($this->_roles === null) {
+            $this->_roles = [];
+            if (!$this->isNewRecord) {
+                $authManager = Yii::$app->authManager;
+                $roles = $authManager->getRolesByUser($this->id);
+                foreach ($roles as $role) {
+                    $this->_roles[] = $role->name;
+                }
+            }
+        }
+        return $this->_roles;
+    }
+    
+    /**
+     * Set user roles
+     * @param array $roles
+     */
+    public function setRoles($roles)
+    {
+        $this->_roles = $roles;
+    }
+    
+    /**
+     * Get warehouses assigned to user
+     * @return array
+     */
+    public function getWarehouses()
+    {
+        if ($this->_warehouses === null) {
+            $this->_warehouses = [];
+            if (!$this->isNewRecord) {
+                $userWarehouses = UserWarehouse::find()->where(['user_id' => $this->id])->all();
+                foreach ($userWarehouses as $userWarehouse) {
+                    $this->_warehouses[] = $userWarehouse->warehouse_id;
+                }
+            }
+        }
+        return $this->_warehouses;
+    }
+    
+    /**
+     * Set warehouses assigned to user
+     * @param array $warehouses
+     */
+    public function setWarehouses($warehouses)
+    {
+        $this->_warehouses = $warehouses;
+    }
+    
+    /**
+     * @inheritdoc
+     */
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+        
+        // Xử lý phân quyền người dùng
+        if ($this->_roles !== null) {
+            $authManager = Yii::$app->authManager;
+            $authManager->revokeAll($this->id);
+            
+            if (is_array($this->_roles)) {
+                foreach ($this->_roles as $roleName) {
+                    $role = $authManager->getRole($roleName);
+                    if ($role) {
+                        $authManager->assign($role, $this->id);
+                    }
+                }
+            }
+        }
+        
+        // Xử lý kho được phép truy cập
+        if ($this->_warehouses !== null) {
+            UserWarehouse::deleteAll(['user_id' => $this->id]);
+            
+            if (is_array($this->_warehouses)) {
+                foreach ($this->_warehouses as $warehouseId) {
+                    $userWarehouse = new UserWarehouse([
+                        'user_id' => $this->id,
+                        'warehouse_id' => $warehouseId,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]);
+                    $userWarehouse->save();
+                }
+            }
+        }
     }
 
     /**
@@ -365,7 +489,7 @@ class User extends ActiveRecord implements IdentityInterface
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getWarehouses()
+    public function getWarehousesRelation()
     {
         return $this->hasMany(Warehouse::class, ['id' => 'warehouse_id'])->via('userWarehouses');
     }

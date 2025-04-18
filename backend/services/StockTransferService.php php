@@ -1,0 +1,325 @@
+<?php
+namespace backend\services;
+
+use Yii;
+use common\models\StockTransfer;
+use common\models\StockTransferDetail;
+use common\models\StockMovement;
+use common\models\ProductBatch;
+use backend\services\StockService;
+
+class StockTransferService
+{
+    private $stockService;
+    
+    public function __construct(StockService $stockService)
+    {
+        $this->stockService = $stockService;
+    }
+    
+    public function generateStockTransferCode()
+    {
+        $prefix = 'CK' . date('ymd');
+        $lastCode = StockTransfer::find()
+            ->where(['like', 'code', $prefix . '%', false])
+            ->orderBy(['id' => SORT_DESC])
+            ->one();
+        
+        if ($lastCode) {
+            $lastNumber = (int)substr($lastCode->code, strlen($prefix));
+            $newNumber = $lastNumber + 1;
+        } else {
+            $newNumber = 1;
+        }
+        
+        return $prefix . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+    }
+    
+    public function saveStockTransferDetails($stock_transfer_id, $details)
+    {
+        foreach ($details as $detail) {
+            $transferDetail = new StockTransferDetail();
+            $transferDetail->stock_transfer_id = $stock_transfer_id;
+            $transferDetail->product_id = $detail['product_id'];
+            $transferDetail->batch_number = $detail['batch_number'] ?? null;
+            $transferDetail->quantity = $detail['quantity'];
+            $transferDetail->unit_id = $detail['unit_id'];
+            $transferDetail->note = $detail['note'] ?? null;
+            
+            if (!$transferDetail->save()) {
+                throw new \Exception('Không thể lưu chi tiết chuyển kho: ' . json_encode($transferDetail->errors));
+            }
+        }
+        
+        return true;
+    }
+    
+    public function approveStockTransfer($id, $user_id)
+    {
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            $transfer = StockTransfer::findOne($id);
+            if (!$transfer) {
+                throw new \Exception('Phiếu chuyển kho không tồn tại.');
+            }
+            
+            if ($transfer->status != StockTransfer::STATUS_DRAFT) {
+                throw new \Exception('Chỉ có thể xác nhận phiếu chuyển kho ở trạng thái nháp.');
+            }
+            
+            // Kiểm tra tồn kho
+            foreach ($transfer->stockTransferDetails as $detail) {
+                $stock = \common\models\Stock::findOne([
+                    'product_id' => $detail->product_id,
+                    'warehouse_id' => $transfer->source_warehouse_id
+                ]);
+                
+                if (!$stock || $stock->quantity < $detail->quantity) {
+                    throw new \Exception('Sản phẩm ' . $detail->product->name . ' không đủ số lượng trong kho nguồn.');
+                }
+                
+                // Kiểm tra lô nếu có
+                if ($detail->batch_number) {
+                    $batch = ProductBatch::findOne([
+                        'product_id' => $detail->product_id,
+                        'warehouse_id' => $transfer->source_warehouse_id,
+                        'batch_number' => $detail->batch_number
+                    ]);
+                    
+                    if (!$batch || $batch->quantity < $detail->quantity) {
+                        throw new \Exception('Lô ' . $detail->batch_number . ' của sản phẩm ' . $detail->product->name . ' không đủ số lượng.');
+                    }
+                }
+            }
+            
+            $transfer->status = StockTransfer::STATUS_CONFIRMED;
+            $transfer->approved_by = $user_id;
+            $transfer->approved_at = date('Y-m-d H:i:s');
+            $transfer->updated_at = date('Y-m-d H:i:s');
+            
+            if (!$transfer->save()) {
+                throw new \Exception('Không thể xác nhận phiếu chuyển kho: ' . json_encode($transfer->errors));
+            }
+            
+            $transaction->commit();
+            return [
+                'success' => true,
+                'message' => 'Phiếu chuyển kho đã được xác nhận thành công.'
+            ];
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    public function startTransfer($id)
+    {
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            $transfer = StockTransfer::findOne($id);
+            if (!$transfer) {
+                throw new \Exception('Phiếu chuyển kho không tồn tại.');
+            }
+            
+            if ($transfer->status != StockTransfer::STATUS_CONFIRMED) {
+                throw new \Exception('Chỉ có thể bắt đầu chuyển kho đã xác nhận.');
+            }
+            
+            // Cập nhật tồn kho tại kho nguồn
+            foreach ($transfer->stockTransferDetails as $detail) {
+                $result = $this->stockService->updateStock(
+                    $detail->product_id,
+                    $transfer->source_warehouse_id,
+                    $detail->quantity,
+                    StockMovement::TYPE_OUT,
+                    $transfer->id,
+                    'stock_transfer',
+                    $detail->unit_id,
+                    $transfer->source_warehouse_id,
+                    $transfer->destination_warehouse_id,
+                    $detail->batch_number,
+                    'Chuyển kho từ ' . $transfer->sourceWarehouse->name . ' đến ' . $transfer->destinationWarehouse->name
+                );
+                
+                if (!$result['success']) {
+                    throw new \Exception($result['message']);
+                }
+            }
+            
+            // Cập nhật trạng thái phiếu chuyển kho
+            $transfer->status = StockTransfer::STATUS_IN_PROGRESS;
+            $transfer->updated_at = date('Y-m-d H:i:s');
+            
+            if (!$transfer->save()) {
+                throw new \Exception('Không thể bắt đầu chuyển kho: ' . json_encode($transfer->errors));
+            }
+            
+            $transaction->commit();
+            return [
+                'success' => true,
+                'message' => 'Phiếu chuyển kho đã được bắt đầu thành công.'
+            ];
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    public function completeTransfer($id, $user_id, $receivedDetails)
+    {
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            $transfer = StockTransfer::findOne($id);
+            if (!$transfer) {
+                throw new \Exception('Phiếu chuyển kho không tồn tại.');
+            }
+            
+            if ($transfer->status != StockTransfer::STATUS_IN_PROGRESS) {
+                throw new \Exception('Chỉ có thể hoàn thành phiếu chuyển kho đang thực hiện.');
+            }
+            
+            // Cập nhật số lượng đã nhận
+            foreach ($receivedDetails as $detailId => $received) {
+                $detail = StockTransferDetail::findOne($detailId);
+                if (!$detail || $detail->stock_transfer_id != $transfer->id) {
+                    throw new \Exception('Chi tiết chuyển kho không hợp lệ.');
+                }
+                
+                $receivedQty = $received['received_quantity'];
+                if ($receivedQty > $detail->quantity) {
+                    throw new \Exception('Số lượng nhận không thể lớn hơn số lượng chuyển.');
+                }
+                
+                $detail->received_quantity = $receivedQty;
+                
+                if (!$detail->save()) {
+                    throw new \Exception('Không thể cập nhật số lượng đã nhận: ' . json_encode($detail->errors));
+                }
+                
+                // Cập nhật tồn kho tại kho đích
+                if ($receivedQty > 0) {
+                    $result = $this->stockService->updateStock(
+                        $detail->product_id,
+                        $transfer->destination_warehouse_id,
+                        $receivedQty,
+                        StockMovement::TYPE_IN,
+                        $transfer->id,
+                        'stock_transfer',
+                        $detail->unit_id,
+                        $transfer->source_warehouse_id,
+                        $transfer->destination_warehouse_id,
+                        $detail->batch_number,
+                        'Nhận chuyển kho từ ' . $transfer->sourceWarehouse->name
+                    );
+                    
+                    if (!$result['success']) {
+                        throw new \Exception($result['message']);
+                    }
+                    
+                    // Nếu có lô, tạo lô mới ở kho đích
+                    if ($detail->batch_number) {
+                        $sourceBatch = ProductBatch::findOne([
+                            'product_id' => $detail->product_id,
+                            'warehouse_id' => $transfer->source_warehouse_id,
+                            'batch_number' => $detail->batch_number
+                        ]);
+                        
+                        if ($sourceBatch) {
+                            $destBatch = ProductBatch::findOne([
+                                'product_id' => $detail->product_id,
+                                'warehouse_id' => $transfer->destination_warehouse_id,
+                                'batch_number' => $detail->batch_number
+                            ]);
+                            
+                            if (!$destBatch) {
+                                $destBatch = new ProductBatch();
+                                $destBatch->product_id = $detail->product_id;
+                                $destBatch->warehouse_id = $transfer->destination_warehouse_id;
+                                $destBatch->batch_number = $detail->batch_number;
+                                $destBatch->quantity = $receivedQty;
+                                $destBatch->manufacturing_date = $sourceBatch->manufacturing_date;
+                                $destBatch->expiry_date = $sourceBatch->expiry_date;
+                                $destBatch->cost_price = $sourceBatch->cost_price;
+                                $destBatch->created_at = date('Y-m-d H:i:s');
+                                $destBatch->updated_at = date('Y-m-d H:i:s');
+                                
+                                if (!$destBatch->save()) {
+                                    throw new \Exception('Không thể tạo lô mới ở kho đích: ' . json_encode($destBatch->errors));
+                                }
+                            } else {
+                                $destBatch->quantity += $receivedQty;
+                                $destBatch->updated_at = date('Y-m-d H:i:s');
+                                
+                                if (!$destBatch->save()) {
+                                    throw new \Exception('Không thể cập nhật lô ở kho đích: ' . json_encode($destBatch->errors));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Cập nhật trạng thái phiếu chuyển kho
+            $transfer->status = StockTransfer::STATUS_RECEIVED;
+            $transfer->received_by = $user_id;
+            $transfer->received_at = date('Y-m-d H:i:s');
+            $transfer->updated_at = date('Y-m-d H:i:s');
+            
+            if (!$transfer->save()) {
+                throw new \Exception('Không thể hoàn thành phiếu chuyển kho: ' . json_encode($transfer->errors));
+            }
+            
+            $transaction->commit();
+            return [
+                'success' => true,
+                'message' => 'Phiếu chuyển kho đã được hoàn thành thành công.'
+            ];
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    public function cancelStockTransfer($id)
+    {
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            $transfer = StockTransfer::findOne($id);
+            if (!$transfer) {
+                throw new \Exception('Phiếu chuyển kho không tồn tại.');
+            }
+            
+            if ($transfer->status != StockTransfer::STATUS_DRAFT && $transfer->status != StockTransfer::STATUS_CONFIRMED) {
+                throw new \Exception('Chỉ có thể hủy phiếu chuyển kho ở trạng thái nháp hoặc đã xác nhận.');
+            }
+            
+            $transfer->status = StockTransfer::STATUS_CANCELED;
+            $transfer->updated_at = date('Y-m-d H:i:s');
+            
+            if (!$transfer->save()) {
+                throw new \Exception('Không thể hủy phiếu chuyển kho: ' . json_encode($transfer->errors));
+            }
+            
+            $transaction->commit();
+            return [
+                'success' => true,
+                'message' => 'Phiếu chuyển kho đã được hủy thành công.'
+            ];
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+}

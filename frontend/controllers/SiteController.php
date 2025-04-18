@@ -2,20 +2,18 @@
 
 namespace frontend\controllers;
 
-use frontend\models\ResendVerificationEmailForm;
-use frontend\models\VerifyEmailForm;
 use Yii;
-use yii\base\InvalidArgumentException;
-use yii\web\BadRequestHttpException;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
 use yii\filters\AccessControl;
 use common\models\LoginForm;
-use frontend\models\PasswordResetRequestForm;
-use frontend\models\ResetPasswordForm;
-use frontend\models\SignupForm;
-use frontend\models\ContactForm;
-
+use common\models\Order;
+use common\models\Shift;
+use common\models\Stock;
+use common\models\Product;
+use common\models\OrderDetail;
+use yii\db\Expression;
+use common\models\LoginHistory;
 /**
  * Site controller
  */
@@ -28,23 +26,21 @@ class SiteController extends Controller
     {
         return [
             'access' => [
-                'class' => AccessControl::class,
-                'only' => ['logout', 'signup'],
+                'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'actions' => ['signup'],
+                        'actions' => ['login', 'error'],
                         'allow' => true,
-                        'roles' => ['?'],
                     ],
                     [
-                        'actions' => ['logout'],
+                        'actions' => ['logout', 'index'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
                 ],
             ],
             'verbs' => [
-                'class' => VerbFilter::class,
+                'class' => VerbFilter::className(),
                 'actions' => [
                     'logout' => ['post'],
                 ],
@@ -59,11 +55,7 @@ class SiteController extends Controller
     {
         return [
             'error' => [
-                'class' => \yii\web\ErrorAction::class,
-            ],
-            'captcha' => [
-                'class' => \yii\captcha\CaptchaAction::class,
-                'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
+                'class' => 'yii\web\ErrorAction',
             ],
         ];
     }
@@ -75,13 +67,142 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
-        return $this->render('index');
+        // Get current user's warehouse
+        $userId = Yii::$app->user->id;
+        $user = Yii::$app->user->identity;
+        $warehouseId = $user->warehouse_id;
+        
+        // Get active shift for this user in this warehouse
+        $activeShift = Shift::findActive($warehouseId, $userId);
+        
+        // Get today's orders count and revenue
+        $todayStart = date('Y-m-d 00:00:00');
+        $todayEnd = date('Y-m-d 23:59:59');
+        
+        $todayOrdersQuery = Order::find()
+            ->where(['warehouse_id' => $warehouseId])
+            ->andWhere(['between', 'order_date', $todayStart, $todayEnd])
+            ->andWhere(['!=', 'status', Order::STATUS_CANCELED]);
+            
+        $todayOrders = [
+            'count' => $todayOrdersQuery->count(),
+            'revenue' => $todayOrdersQuery->sum('total_amount') ?: 0,
+        ];
+        
+        // Get top selling products for the last 30 days
+        $date30DaysAgo = date('Y-m-d', strtotime('-30 days'));
+        
+        // Tùy chọn 1: Sử dụng ActiveRecord nếu bạn cần load model đầy đủ
+        $topProductsQuery = OrderDetail::find()
+            ->alias('od')
+            ->select([
+                'p.id', 
+                'p.code', 
+                'p.name', 
+                'SUM(od.quantity) as quantity', 
+                'SUM(od.total_amount) as revenue'
+            ])
+            ->innerJoin(['o' => Order::tableName()], 'od.order_id = o.id')
+            ->innerJoin(['p' => Product::tableName()], 'od.product_id = p.id')
+            ->where(['o.warehouse_id' => $warehouseId])
+            ->andWhere(['>=', 'o.order_date', $date30DaysAgo])
+            ->andWhere(['!=', 'o.status', Order::STATUS_CANCELED])
+            ->groupBy(['p.id', 'p.code', 'p.name'])
+            ->orderBy(['quantity' => SORT_DESC])
+            ->limit(5);
+            
+        $topProducts = $topProductsQuery->asArray()->all();
+        
+        // Nếu không có dữ liệu, tạo dữ liệu mẫu
+        if (empty($topProducts)) {
+            $topProducts = [
+                ['id' => 1, 'code' => 'P001', 'name' => 'Sản phẩm mẫu 1'],
+                ['id' => 2, 'code' => 'P002', 'name' => 'Sản phẩm mẫu 2'],
+                ['id' => 3, 'code' => 'P003', 'name' => 'Sản phẩm mẫu 3'],
+            ];
+        }
+        
+        // Get low stock products
+        $lowStockProductsData = Stock::getLowStockProducts($warehouseId);
+        $lowStockProducts = [];
+        
+        foreach ($lowStockProductsData as $stock) {
+            $minStock = $stock->min_stock ?? $stock->product->min_stock;
+            
+            $lowStockProducts[] = [
+                'id' => $stock->product_id,
+                'code' => $stock->product->code,
+                'name' => $stock->product->name,
+                'quantity' => $stock->quantity,
+                'min_stock' => $minStock,
+            ];
+        }
+        
+        // Get recent orders
+        $recentOrders = Order::find()
+            ->alias('o')
+            ->select([
+                'o.id', 
+                'o.code', 
+                'o.order_date', 
+                'o.total_amount', 
+                'o.payment_status', 
+                'o.status',
+                'c.name as customer_name'
+            ])
+            ->leftJoin(['c' => 'customer'], 'o.customer_id = c.id')
+            ->where(['o.warehouse_id' => $warehouseId])
+            ->orderBy(['o.order_date' => SORT_DESC])
+            ->limit(10)
+            ->asArray()
+            ->all();
+            
+        // Nếu không có đơn hàng, tạo dữ liệu mẫu
+        if (empty($recentOrders)) {
+            $recentOrders = [
+                [
+                    'id' => 1,
+                    'code' => 'ORD000001',
+                    'order_date' => date('Y-m-d H:i:s'),
+                    'total_amount' => 100000,
+                    'payment_status' => Order::PAYMENT_STATUS_PAID,
+                    'status' => Order::STATUS_COMPLETED,
+                    'customer_name' => 'Khách lẻ'
+                ],
+                [
+                    'id' => 2,
+                    'code' => 'ORD000002',
+                    'order_date' => date('Y-m-d H:i:s', strtotime('-1 day')),
+                    'total_amount' => 200000,
+                    'payment_status' => Order::PAYMENT_STATUS_PAID,
+                    'status' => Order::STATUS_COMPLETED,
+                    'customer_name' => 'Khách lẻ'
+                ],
+                [
+                    'id' => 3,
+                    'code' => 'ORD000003',
+                    'order_date' => date('Y-m-d H:i:s', strtotime('-2 day')),
+                    'total_amount' => 150000,
+                    'payment_status' => Order::PAYMENT_STATUS_PAID,
+                    'status' => Order::STATUS_COMPLETED,
+                    'customer_name' => 'Khách lẻ'
+                ]
+            ];
+        }
+        
+        return $this->render('index', [
+            'activeShift' => $activeShift,
+            'todayOrders' => $todayOrders,
+            'topProducts' => $topProducts,
+            'lowStockProducts' => $lowStockProducts,
+            'recentOrders' => $recentOrders,
+        ]);
     }
 
     /**
-     * Logs in a user.
+     * Login action.
      *
-     * @return mixed
+     * @return string|\yii\web\Response
      */
     public function actionLogin()
     {
@@ -89,171 +210,35 @@ class SiteController extends Controller
             return $this->goHome();
         }
 
+        $this->layout = 'login';
         $model = new LoginForm();
         if ($model->load(Yii::$app->request->post()) && $model->login()) {
             return $this->goBack();
         }
 
         $model->password = '';
-
         return $this->render('login', [
             'model' => $model,
         ]);
     }
 
     /**
-     * Logs out the current user.
+     * Logout action.
      *
-     * @return mixed
+     * @return \yii\web\Response
      */
     public function actionLogout()
     {
+        // Lưu user ID trước khi đăng xuất
+        $userId = Yii::$app->user->id;
+        
         Yii::$app->user->logout();
+        
+        // Ghi log đăng xuất nếu có user ID
+        if ($userId) {
+            LoginHistory::logLogout($userId);
+        }
 
         return $this->goHome();
-    }
-
-    /**
-     * Displays contact page.
-     *
-     * @return mixed
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
-            if ($model->sendEmail(Yii::$app->params['adminEmail'])) {
-                Yii::$app->session->setFlash('success', 'Thank you for contacting us. We will respond to you as soon as possible.');
-            } else {
-                Yii::$app->session->setFlash('error', 'There was an error sending your message.');
-            }
-
-            return $this->refresh();
-        }
-
-        return $this->render('contact', [
-            'model' => $model,
-        ]);
-    }
-
-    /**
-     * Displays about page.
-     *
-     * @return mixed
-     */
-    public function actionAbout()
-    {
-        return $this->render('about');
-    }
-
-    /**
-     * Signs user up.
-     *
-     * @return mixed
-     */
-    public function actionSignup()
-    {
-        $model = new SignupForm();
-        if ($model->load(Yii::$app->request->post()) && $model->signup()) {
-            Yii::$app->session->setFlash('success', 'Thank you for registration. Please check your inbox for verification email.');
-            return $this->goHome();
-        }
-
-        return $this->render('signup', [
-            'model' => $model,
-        ]);
-    }
-
-    /**
-     * Requests password reset.
-     *
-     * @return mixed
-     */
-    public function actionRequestPasswordReset()
-    {
-        $model = new PasswordResetRequestForm();
-        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
-            if ($model->sendEmail()) {
-                Yii::$app->session->setFlash('success', 'Check your email for further instructions.');
-
-                return $this->goHome();
-            }
-
-            Yii::$app->session->setFlash('error', 'Sorry, we are unable to reset password for the provided email address.');
-        }
-
-        return $this->render('requestPasswordResetToken', [
-            'model' => $model,
-        ]);
-    }
-
-    /**
-     * Resets password.
-     *
-     * @param string $token
-     * @return mixed
-     * @throws BadRequestHttpException
-     */
-    public function actionResetPassword($token)
-    {
-        try {
-            $model = new ResetPasswordForm($token);
-        } catch (InvalidArgumentException $e) {
-            throw new BadRequestHttpException($e->getMessage());
-        }
-
-        if ($model->load(Yii::$app->request->post()) && $model->validate() && $model->resetPassword()) {
-            Yii::$app->session->setFlash('success', 'New password saved.');
-
-            return $this->goHome();
-        }
-
-        return $this->render('resetPassword', [
-            'model' => $model,
-        ]);
-    }
-
-    /**
-     * Verify email address
-     *
-     * @param string $token
-     * @throws BadRequestHttpException
-     * @return yii\web\Response
-     */
-    public function actionVerifyEmail($token)
-    {
-        try {
-            $model = new VerifyEmailForm($token);
-        } catch (InvalidArgumentException $e) {
-            throw new BadRequestHttpException($e->getMessage());
-        }
-        if (($user = $model->verifyEmail()) && Yii::$app->user->login($user)) {
-            Yii::$app->session->setFlash('success', 'Your email has been confirmed!');
-            return $this->goHome();
-        }
-
-        Yii::$app->session->setFlash('error', 'Sorry, we are unable to verify your account with provided token.');
-        return $this->goHome();
-    }
-
-    /**
-     * Resend verification email
-     *
-     * @return mixed
-     */
-    public function actionResendVerificationEmail()
-    {
-        $model = new ResendVerificationEmailForm();
-        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
-            if ($model->sendEmail()) {
-                Yii::$app->session->setFlash('success', 'Check your email for further instructions.');
-                return $this->goHome();
-            }
-            Yii::$app->session->setFlash('error', 'Sorry, we are unable to resend verification email for the provided email address.');
-        }
-
-        return $this->render('resendVerificationEmail', [
-            'model' => $model
-        ]);
     }
 }
