@@ -1,0 +1,129 @@
+# yii console commands
+/yii
+/yii_test
+/yii_test.bat
+
+# phpstorm project files
+.idea
+
+# netbeans project files
+nbproject
+
+# zend studio for eclipse project files
+.buildpath
+.project
+.settings
+
+# windows thumbnail cache
+Thumbs.db
+
+# composer vendor dir
+/vendor
+
+# composer itself is not needed
+composer.phar
+
+# Mac DS_Store Files
+.DS_Store
+
+# phpunit itself is not needed
+phpunit.phar
+# local phpunit config
+/phpunit.xml
+
+# vagrant runtime
+/.vagrant
+
+# ignore generated files
+/frontend/web/index.php
+/frontend/web/index-test.php
+/frontend/web/robots.txt
+/backend/web/index.php
+/backend/web/index-test.php
+/backend/web/robots.txt
+Vagrantfile
+vagrant/provision/provision.awk
+vagrant/provision/once-as-vagrant.sh
+vagrant/provision/once-as-root.sh
+vagrant/provision/common.sh
+vagrant/provision/always-as-root.sh
+vagrant/nginx/app.conf
+vagrant/config/vagrant-local.example.yml
+frontend/tests/unit/models/VerifyEmailFormTest.php
+frontend/tests/unit/models/SignupFormTest.php
+frontend/tests/unit/models/ResetPasswordFormTest.php
+frontend/tests/unit/models/ResendVerificationEmailFormTest.php
+frontend/tests/unit/models/PasswordResetRequestFormTest.php
+frontend/tests/unit/models/ContactFormTest.php
+frontend/tests/unit/_bootstrap.php
+frontend/tests/unit.suite.yml
+frontend/tests/functional/VerifyEmailCest.php
+frontend/tests/functional/SignupCest.php
+frontend/tests/functional/ResendVerificationEmailCest.php
+frontend/tests/functional/LoginCest.php
+frontend/tests/functional/HomeCest.php
+frontend/tests/functional/ContactCest.php
+frontend/tests/functional/AboutCest.php
+frontend/tests/functional/_bootstrap.php
+frontend/tests/functional.suite.yml
+frontend/tests/acceptance/HomeCest.php
+frontend/tests/acceptance/_bootstrap.php
+frontend/tests/acceptance.suite.yml.example
+frontend/tests/_support/UnitTester.php
+frontend/tests/_support/FunctionalTester.php
+frontend/tests/_data/user.php
+frontend/tests/_data/login_data.php
+frontend/tests/_bootstrap.php
+frontend/Dockerfile
+environments/prod/yii
+environments/prod/frontend/web/robots.txt
+environments/prod/frontend/web/index.php
+environments/prod/frontend/config/params-local.php
+environments/prod/frontend/config/main-local.php
+environments/prod/console/config/params-local.php
+environments/prod/console/config/main-local.php
+environments/prod/common/config/params-local.php
+environments/prod/common/config/main-local.php
+environments/prod/backend/web/robots.txt
+environments/prod/backend/web/index.php
+environments/prod/backend/config/params-local.php
+environments/prod/backend/config/main-local.php
+environments/index.php
+environments/dev/yii_test.bat
+environments/dev/yii_test
+environments/dev/yii
+environments/dev/frontend/web/robots.txt
+environments/dev/frontend/web/index.php
+environments/dev/frontend/web/index-test.php
+environments/dev/frontend/config/test-local.php
+environments/dev/frontend/config/params-local.php
+environments/dev/frontend/config/main-local.php
+environments/dev/frontend/config/codeception-local.php
+environments/dev/console/config/test-local.php
+environments/dev/console/config/params-local.php
+environments/dev/console/config/main-local.php
+environments/dev/common/config/test-local.php
+environments/dev/common/config/params-local.php
+environments/dev/common/config/main-local.php
+environments/dev/common/config/codeception-local.php
+environments/dev/backend/web/robots.txt
+environments/dev/backend/web/index.php
+environments/dev/backend/web/index-test.php
+environments/dev/backend/config/test-local.php
+environments/dev/backend/config/params-local.php
+environments/dev/backend/config/main-local.php
+environments/dev/backend/config/codeception-local.php
+common/tests/unit/models/LoginFormTest.php
+common/tests/unit.suite.yml
+common/tests/_support/UnitTester.php
+common/tests/_data/user.php
+common/tests/_bootstrap.php
+backend/tests/unit/_bootstrap.php
+backend/tests/unit.suite.yml
+backend/tests/functional/LoginCest.php
+backend/tests/functional/_bootstrap.php
+backend/tests/functional.suite.yml
+backend/tests/_support/UnitTester.php
+backend/tests/_support/FunctionalTester.php
+backend/tests/_data/login_data.php
+backend/tests/_bootstrap.php
