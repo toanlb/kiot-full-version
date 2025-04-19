@@ -10,10 +10,12 @@ use common\models\Order;
 use common\models\Product;
 use common\models\Customer;
 use common\models\Stock;
-use common\models\StockMovement;
 use common\models\Warranty;
-use common\models\Receipt;
 use common\models\Payment;
+use common\models\LoginHistory;
+use common\models\User;
+use yii\web\Response;
+
 
 /**
  * Site controller
@@ -257,7 +259,7 @@ class SiteController extends Controller
      */
     public function actionDashboardData()
     {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        Yii::$app->response->format = Response::FORMAT_JSON;
         
         $today = date('Y-m-d');
         
@@ -328,7 +330,7 @@ class SiteController extends Controller
      */
     private function saveLoginHistory()
     {
-        $loginHistory = new \backend\models\LoginHistory();
+        $loginHistory = new LoginHistory();
         $loginHistory->user_id = Yii::$app->user->id;
         $loginHistory->login_time = date('Y-m-d H:i:s');
         $loginHistory->ip_address = Yii::$app->request->userIP;
@@ -337,7 +339,7 @@ class SiteController extends Controller
         $loginHistory->save();
         
         // Cập nhật thời gian đăng nhập cuối cho user
-        $user = \common\models\User::findOne(Yii::$app->user->id);
+        $user = User::findOne(Yii::$app->user->id);
         if ($user) {
             $user->last_login_at = date('Y-m-d H:i:s');
             $user->save(false); // Skip validation
@@ -352,7 +354,7 @@ class SiteController extends Controller
     public function actionLogout()
     {
         // Cập nhật thời gian đăng xuất trong lịch sử đăng nhập
-        $loginHistory = \backend\models\LoginHistory::find()
+        $loginHistory = LoginHistory::find()
             ->where(['user_id' => Yii::$app->user->id])
             ->andWhere(['IS', 'logout_time', null])
             ->orderBy(['login_time' => SORT_DESC])

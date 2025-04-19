@@ -24,7 +24,9 @@
         "kartik-v/yii2-grid": "dev-master",
         "kartik-v/yii2-krajee-base": "dev-master",
         "kartik-v/yii2-date-range": "dev-master",
-        "2amigos/yii2-chartjs-widget": "~2.0"
+        "2amigos/yii2-chartjs-widget": "~2.0",
+        "yiisoft/yii2-bootstrap4": "^2.0",
+        "bower-asset/select2": "^4.0"
     },
     "require-dev": {
         "yiisoft/yii2-debug": "~2.1.0",
