@@ -5,7 +5,7 @@ use yii\helpers\Url;
 /* @var $this yii\web\View */
 /* @var $model common\models\Product */
 
-$comboItems = $model->comboItems;
+$comboItems = $model->productCombos;
 ?>
 
 <div class="product-combo mt-4">
@@ -40,7 +40,8 @@ $comboItems = $model->comboItems;
                                     <td class="text-center"><?= $index + 1 ?></td>
                                     <td class="text-center">
                                         <?php
-                                        $mainImage = $product->getMainImage();
+                                        $mainImage = $product->getMainImage()->one();
+                                        $mainImage = $mainImage ? $mainImage : null;
                                         if ($mainImage) {
                                             echo Html::img(Yii::$app->urlManager->createUrl('/' . $mainImage->image), [
                                                 'class' => 'img-thumbnail',

@@ -365,6 +365,18 @@ class Product extends ActiveRecord
     }
 
     /**
+     * Gets total stock quantity across all warehouses
+     * 
+     * @return int Total quantity in stock
+     */
+    public function getTotalStock()
+    {
+        return Stock::find()
+            ->where(['product_id' => $this->id])
+            ->sum('quantity') ?: 0;
+    }
+
+    /**
      * Gets query for [[Suppliers]].
      *
      * @return \yii\db\ActiveQuery
@@ -382,6 +394,26 @@ class Product extends ActiveRecord
     public function getCreatedBy()
     {
         return $this->hasOne(User::class, ['id' => 'created_by']);
+    }
+
+    /**
+     * Gets the main image for a combo product
+     * 
+     * @return \yii\db\ActiveQuery
+     */
+    public function getComboImage()
+    {
+        return $this->getMainImage();
+    }
+
+    /**
+     * Gets product attribute values with a unique method name to avoid conflicts
+     * 
+     * @return \yii\db\ActiveRecord[]
+     */
+    public function getProdAttrValues()
+    {
+        return $this->productAttributeValues;
     }
 
     /**

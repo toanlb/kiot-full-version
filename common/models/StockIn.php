@@ -7,7 +7,6 @@ use yii\db\ActiveRecord;
 use yii\behaviors\TimestampBehavior;
 use yii\behaviors\BlameableBehavior;
 use yii\db\Expression;
-use yii\helpers\ArrayHelper;
 
 /**
  * This is the model class for table "stock_in".
@@ -23,8 +22,8 @@ use yii\helpers\ArrayHelper;
  * @property float $tax_amount
  * @property float $final_amount
  * @property float $paid_amount
- * @property int $payment_status
- * @property int $status
+ * @property int $payment_status 0: unpaid, 1: partially, 2: paid
+ * @property int $status 0: draft, 1: confirmed, 2: completed, 3: canceled
  * @property string|null $note
  * @property string $created_at
  * @property string $updated_at
@@ -32,11 +31,12 @@ use yii\helpers\ArrayHelper;
  * @property int|null $approved_by
  * @property string|null $approved_at
  *
- * @property User $approvedBy
- * @property User $createdBy
  * @property ProductBatch[] $productBatches
  * @property StockInDetail[] $stockInDetails
+ * @property StockMovement[] $stockMovements
  * @property Supplier $supplier
+ * @property User $createdBy
+ * @property User $approvedBy
  * @property Warehouse $warehouse
  */
 class StockIn extends ActiveRecord
@@ -45,11 +45,11 @@ class StockIn extends ActiveRecord
     const STATUS_CONFIRMED = 1;
     const STATUS_COMPLETED = 2;
     const STATUS_CANCELED = 3;
-
+    
     const PAYMENT_STATUS_UNPAID = 0;
-    const PAYMENT_STATUS_PARTIALLY = 1;
+    const PAYMENT_STATUS_PARTIALLY_PAID = 1;
     const PAYMENT_STATUS_PAID = 2;
-
+    
     /**
      * {@inheritdoc}
      */
@@ -89,12 +89,14 @@ class StockIn extends ActiveRecord
             [['stock_in_date', 'created_at', 'updated_at', 'approved_at'], 'safe'],
             [['total_amount', 'discount_amount', 'tax_amount', 'final_amount', 'paid_amount'], 'number'],
             [['note'], 'string'],
-            [['code', 'reference_number'], 'string', 'max' => 50],
+            [['code', 'reference_number'], 'string', 'max' => 100],
             [['code'], 'unique'],
-            [['approved_by'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['approved_by' => 'id']],
-            [['created_by'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['created_by' => 'id']],
-            [['supplier_id'], 'exist', 'skipOnError' => true, 'targetClass' => Supplier::class, 'targetAttribute' => ['supplier_id' => 'id']],
+            [['payment_status'], 'in', 'range' => [self::PAYMENT_STATUS_UNPAID, self::PAYMENT_STATUS_PARTIALLY_PAID, self::PAYMENT_STATUS_PAID]],
+            [['status'], 'in', 'range' => [self::STATUS_DRAFT, self::STATUS_CONFIRMED, self::STATUS_COMPLETED, self::STATUS_CANCELED]],
             [['warehouse_id'], 'exist', 'skipOnError' => true, 'targetClass' => Warehouse::class, 'targetAttribute' => ['warehouse_id' => 'id']],
+            [['supplier_id'], 'exist', 'skipOnError' => true, 'targetClass' => Supplier::class, 'targetAttribute' => ['supplier_id' => 'id']],
+            [['created_by'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['created_by' => 'id']],
+            [['approved_by'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['approved_by' => 'id']],
         ];
     }
 
@@ -108,9 +110,9 @@ class StockIn extends ActiveRecord
             'code' => 'Mã phiếu',
             'warehouse_id' => 'Kho',
             'supplier_id' => 'Nhà cung cấp',
-            'stock_in_date' => 'Ngày nhập',
+            'stock_in_date' => 'Ngày nhập kho',
             'reference_number' => 'Số tham chiếu',
-            'total_amount' => 'Tổng tiền hàng',
+            'total_amount' => 'Tổng tiền',
             'discount_amount' => 'Chiết khấu',
             'tax_amount' => 'Thuế',
             'final_amount' => 'Thành tiền',
@@ -124,26 +126,6 @@ class StockIn extends ActiveRecord
             'approved_by' => 'Người duyệt',
             'approved_at' => 'Ngày duyệt',
         ];
-    }
-
-    /**
-     * Gets query for [[ApprovedBy]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getApprovedBy()
-    {
-        return $this->hasOne(User::class, ['id' => 'approved_by']);
-    }
-
-    /**
-     * Gets query for [[CreatedBy]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getCreatedBy()
-    {
-        return $this->hasOne(User::class, ['id' => 'created_by']);
     }
 
     /**
@@ -167,6 +149,17 @@ class StockIn extends ActiveRecord
     }
 
     /**
+     * Gets query for [[StockMovements]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getStockMovements()
+    {
+        return $this->hasMany(StockMovement::class, ['reference_id' => 'id'])
+            ->andWhere(['reference_type' => 'stock_in']);
+    }
+
+    /**
      * Gets query for [[Supplier]].
      *
      * @return \yii\db\ActiveQuery
@@ -174,6 +167,26 @@ class StockIn extends ActiveRecord
     public function getSupplier()
     {
         return $this->hasOne(Supplier::class, ['id' => 'supplier_id']);
+    }
+
+    /**
+     * Gets query for [[CreatedBy]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getCreatedBy()
+    {
+        return $this->hasOne(User::class, ['id' => 'created_by']);
+    }
+
+    /**
+     * Gets query for [[ApprovedBy]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getApprovedBy()
+    {
+        return $this->hasOne(User::class, ['id' => 'approved_by']);
     }
 
     /**
@@ -185,35 +198,35 @@ class StockIn extends ActiveRecord
     {
         return $this->hasOne(Warehouse::class, ['id' => 'warehouse_id']);
     }
-
+    
     /**
-     * Get status label
-     * 
+     * Gets the status label
+     *
      * @return string
      */
     public function getStatusLabel()
     {
-        $statuses = self::getStatuses();
-        return isset($statuses[$this->status]) ? $statuses[$this->status] : 'Không xác định';
+        $statuses = self::getStatusList();
+        return isset($statuses[$this->status]) ? $statuses[$this->status] : '';
     }
-
+    
     /**
-     * Get payment status label
-     * 
+     * Gets the payment status label
+     *
      * @return string
      */
     public function getPaymentStatusLabel()
     {
-        $statuses = self::getPaymentStatuses();
-        return isset($statuses[$this->payment_status]) ? $statuses[$this->payment_status] : 'Không xác định';
+        $statuses = self::getPaymentStatusList();
+        return isset($statuses[$this->payment_status]) ? $statuses[$this->payment_status] : '';
     }
-
+    
     /**
-     * Get statuses
-     * 
+     * Returns list of statuses
+     *
      * @return array
      */
-    public static function getStatuses()
+    public static function getStatusList()
     {
         return [
             self::STATUS_DRAFT => 'Nháp',
@@ -222,178 +235,130 @@ class StockIn extends ActiveRecord
             self::STATUS_CANCELED => 'Đã hủy',
         ];
     }
-
+    
     /**
-     * Get payment statuses
-     * 
+     * Returns list of payment statuses
+     *
      * @return array
      */
-    public static function getPaymentStatuses()
+    public static function getPaymentStatusList()
     {
         return [
             self::PAYMENT_STATUS_UNPAID => 'Chưa thanh toán',
-            self::PAYMENT_STATUS_PARTIALLY => 'Thanh toán một phần',
+            self::PAYMENT_STATUS_PARTIALLY_PAID => 'Thanh toán một phần',
             self::PAYMENT_STATUS_PAID => 'Đã thanh toán',
         ];
     }
-
+    
     /**
-     * Update stock in payment status
+     * Checks if the stock in can be edited
+     *
+     * @return boolean
      */
-    public function updatePaymentStatus()
+    public function canEdit()
     {
-        if ($this->paid_amount <= 0) {
-            $this->payment_status = self::PAYMENT_STATUS_UNPAID;
-        } elseif ($this->paid_amount < $this->final_amount) {
-            $this->payment_status = self::PAYMENT_STATUS_PARTIALLY;
-        } else {
-            $this->payment_status = self::PAYMENT_STATUS_PAID;
-        }
+        return $this->status === self::STATUS_DRAFT;
     }
-
+    
     /**
-     * Get remaining amount
-     * 
+     * Checks if the stock in can be confirmed
+     *
+     * @return boolean
+     */
+    public function canConfirm()
+    {
+        return $this->status === self::STATUS_DRAFT;
+    }
+    
+    /**
+     * Checks if the stock in can be completed
+     *
+     * @return boolean
+     */
+    public function canComplete()
+    {
+        return $this->status === self::STATUS_CONFIRMED;
+    }
+    
+    /**
+     * Checks if the stock in can be canceled
+     *
+     * @return boolean
+     */
+    public function canCancel()
+    {
+        return in_array($this->status, [self::STATUS_DRAFT, self::STATUS_CONFIRMED]);
+    }
+    
+    /**
+     * Calculates the remaining amount to be paid
+     *
      * @return float
      */
     public function getRemainingAmount()
     {
-        return $this->final_amount - $this->paid_amount;
+        return max(0, $this->final_amount - $this->paid_amount);
     }
-
+    
     /**
-     * Generate stock in code
-     * 
+     * Updates the payment status based on paid amount
+     */
+    public function updatePaymentStatus()
+    {
+        $remainingAmount = $this->getRemainingAmount();
+        
+        if ($remainingAmount <= 0) {
+            $this->payment_status = self::PAYMENT_STATUS_PAID;
+        } elseif ($this->paid_amount > 0) {
+            $this->payment_status = self::PAYMENT_STATUS_PARTIALLY_PAID;
+        } else {
+            $this->payment_status = self::PAYMENT_STATUS_UNPAID;
+        }
+        
+        $this->save(false);
+    }
+    
+    /**
+     * Generates a new stock in code
+     *
      * @return string
      */
     public static function generateCode()
     {
         $prefix = 'NK';
-        $year = date('y');
-        $month = date('m');
-        
-        $latestStockIn = self::find()
-            ->where(['LIKE', 'code', $prefix . $year . $month])
+        $date = date('ymd');
+        $lastStock = self::find()
+            ->where(['like', 'code', $prefix . $date])
             ->orderBy(['id' => SORT_DESC])
             ->one();
             
-        $sequence = '001';
-        if ($latestStockIn) {
-            $parts = explode($prefix . $year . $month, $latestStockIn->code);
-            if (isset($parts[1])) {
-                $sequence = str_pad((int)$parts[1] + 1, 3, '0', STR_PAD_LEFT);
-            }
+        $lastNumber = 1;
+        if ($lastStock) {
+            $lastNumberStr = substr($lastStock->code, -4);
+            $lastNumber = (int)$lastNumberStr + 1;
         }
         
-        return $prefix . $year . $month . $sequence;
+        return $prefix . $date . str_pad($lastNumber, 4, '0', STR_PAD_LEFT);
     }
-
+    
     /**
-     * Process stock in (add to stock)
-     * 
-     * @return bool
+     * Calculates total amount from details
      */
-    public function processStockIn()
+    public function calculateTotals()
     {
-        if ($this->status != self::STATUS_CONFIRMED) {
-            return false;
+        $details = $this->stockInDetails;
+        
+        $this->total_amount = 0;
+        $this->discount_amount = 0;
+        $this->tax_amount = 0;
+        
+        foreach ($details as $detail) {
+            $this->total_amount += $detail->total_price;
+            $this->discount_amount += $detail->discount_amount;
+            $this->tax_amount += $detail->tax_amount;
         }
         
-        $transaction = Yii::$app->db->beginTransaction();
-        try {
-            foreach ($this->stockInDetails as $detail) {
-                // Add to stock
-                Stock::increase($detail->product_id, $this->warehouse_id, $detail->quantity);
-                
-                // Record movement
-                StockMovement::recordMovement([
-                    'product_id' => $detail->product_id,
-                    'destination_warehouse_id' => $this->warehouse_id,
-                    'reference_id' => $this->id,
-                    'reference_type' => 'stock_in',
-                    'quantity' => $detail->quantity,
-                    'unit_id' => $detail->unit_id,
-                    'movement_type' => StockMovement::TYPE_IN,
-                    'movement_date' => $this->stock_in_date,
-                    'note' => 'Nhập kho từ phiếu: ' . $this->code,
-                ]);
-                
-                // Create batch if needed
-                if ($detail->batch_number) {
-                    $batch = ProductBatch::findOne([
-                        'product_id' => $detail->product_id,
-                        'warehouse_id' => $this->warehouse_id,
-                        'batch_number' => $detail->batch_number,
-                    ]);
-                    
-                    if (!$batch) {
-                        $batch = new ProductBatch();
-                        $batch->product_id = $detail->product_id;
-                        $batch->warehouse_id = $this->warehouse_id;
-                        $batch->batch_number = $detail->batch_number;
-                        $batch->expiry_date = $detail->expiry_date;
-                        $batch->quantity = 0;
-                        $batch->cost_price = $detail->unit_price;
-                        $batch->stock_in_id = $this->id;
-                    }
-                    
-                    $batch->quantity += $detail->quantity;
-                    
-                    if (!$batch->save()) {
-                        throw new \Exception('Không thể lưu thông tin lô hàng');
-                    }
-                }
-                
-                // Update product cost price if needed
-                $product = Product::findOne($detail->product_id);
-                if ($product && $product->cost_price != $detail->unit_price) {
-                    $product->cost_price = $detail->unit_price;
-                    
-                    if (!$product->save()) {
-                        throw new \Exception('Không thể cập nhật giá nhập sản phẩm');
-                    }
-                    
-                    // Record price history
-                    ProductPriceHistory::recordPriceChange(
-                        $product->id,
-                        $product->cost_price,
-                        $product->selling_price,
-                        'Cập nhật từ phiếu nhập kho: ' . $this->code,
-                        $this->stock_in_date
-                    );
-                }
-            }
-            
-            // Update stock in status
-            $this->status = self::STATUS_COMPLETED;
-            $this->save(false);
-            
-            // Update supplier debt if needed
-            if ($this->supplier_id && $this->final_amount > 0) {
-                $debt = new SupplierDebt();
-                $debt->supplier_id = $this->supplier_id;
-                $debt->reference_id = $this->id;
-                $debt->reference_type = 'stock_in';
-                $debt->amount = $this->final_amount;
-                $debt->balance = $this->final_amount - $this->paid_amount;
-                $debt->type = 1; // debt
-                $debt->description = 'Nợ từ phiếu nhập kho: ' . $this->code;
-                $debt->transaction_date = $this->stock_in_date;
-                
-                if (!$debt->save()) {
-                    throw new \Exception('Không thể lưu thông tin công nợ nhà cung cấp');
-                }
-                
-                // Update supplier debt amount
-                $supplier = $this->supplier;
-                $supplier->debt_amount += $debt->balance;
-                $supplier->save(false);
-            }
-            
-            $transaction->commit();
-            return true;
-        } catch (\Exception $e) {
-            $transaction->rollBack();
-            Yii::error($e->getMessage());
-            return false;
-        }
+        $this->final_amount = $this->total_amount - $this->discount_amount + $this->tax_amount;
+        $this->save(false);
+    }
+}

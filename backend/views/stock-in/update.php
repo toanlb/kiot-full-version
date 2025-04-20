@@ -8,12 +8,14 @@ use yii\helpers\Html;
 /* @var $suppliers array */
 /* @var $products array */
 /* @var $units array */
+/* @var $details common\models\StockInDetail[] */
 
-$this->title = 'Tạo phiếu nhập kho';
+$this->title = 'Cập nhật phiếu nhập kho: ' . $model->code;
 $this->params['breadcrumbs'][] = ['label' => 'Quản lý nhập kho', 'url' => ['index']];
-$this->params['breadcrumbs'][] = $this->title;
+$this->params['breadcrumbs'][] = ['label' => $model->code, 'url' => ['view', 'id' => $model->id]];
+$this->params['breadcrumbs'][] = 'Cập nhật';
 ?>
-<div class="stock-in-create">
+<div class="stock-in-update">
     <div class="card">
         <div class="card-header">
             <h3 class="card-title"><?= Html::encode($this->title) ?></h3>
@@ -25,6 +27,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 'suppliers' => $suppliers,
                 'products' => $products,
                 'units' => $units,
+                'details' => $details,
             ]) ?>
         </div>
     </div>

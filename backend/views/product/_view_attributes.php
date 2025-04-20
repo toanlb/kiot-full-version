@@ -4,7 +4,7 @@ use yii\helpers\Html;
 /* @var $this yii\web\View */
 /* @var $model common\models\Product */
 
-$attributeValues = $model->attributeValues;
+$attributeValues = $model->prodAttrValues;
 ?>
 
 <div class="product-attributes mt-4">
@@ -26,7 +26,7 @@ $attributeValues = $model->attributeValues;
                         <tbody>
                             <?php foreach ($attributeValues as $attributeValue): ?>
                                 <tr>
-                                    <td><?= Html::encode($attributeValue->attribute->name) ?></td>
+                                    <td><?= Html::encode($attributeValue->getAttribute0()->name) ?></td>
                                     <td><?= Html::encode($attributeValue->value) ?></td>
                                 </tr>
                             <?php endforeach; ?>

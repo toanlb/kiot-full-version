@@ -5,6 +5,7 @@ use yii\grid\GridView;
 use yii\data\ArrayDataProvider;
 use kartik\tabs\TabsX;
 
+
 /* @var $this yii\web\View */
 /* @var $model common\models\Product */
 
@@ -95,7 +96,11 @@ $this->params['breadcrumbs'][] = $this->title;
                 <div class="col-md-4">
                     <div class="product-image text-center">
                         <?php
-                        $mainImage = $model->getMainImage();
+                        $mainImage = $model->getMainImage()->one();
+                        $mainImage = $mainImage ? $mainImage : null;
+                        if ($model->is_combo) {
+                            $mainImage = $model->getComboImage()->one();
+                        }
                         if ($mainImage) {
                             echo Html::img(Yii::$app->urlManager->createUrl('/' . $mainImage->image), [
                                 'class' => 'img-fluid',
@@ -137,7 +142,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     'label' => '<i class="fas fa-list-ul"></i> Thuộc tính sản phẩm',
                     'content' => $this->render('_view_attributes', ['model' => $model]),
                     'headerOptions' => ['class' => 'product-attributes-tab'],
-                    'visible' => !empty($model->attributeValues),
+                    'visible' => !empty($model->productAttributeValues),
                 ],
                 [
                     'label' => '<i class="fas fa-cubes"></i> Thành phần combo',
@@ -151,7 +156,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 ],
                 [
                     'label' => '<i class="fas fa-exchange-alt"></i> Lịch sử kho',
-                    'content' => $this->render('_view_stock_history', ['model' => $model]),
+                  
                 ],
             ];
             
@@ -159,8 +164,10 @@ $this->params['breadcrumbs'][] = $this->title;
                 'items' => $items,
                 'position' => TabsX::POS_ABOVE,
                 'encodeLabels' => false,
-                'bordered' => true,
-                'enableStickyTabs' => true,
+                'pluginOptions' => [
+                    'enableCache' => false,
+                ],
+                'bsVersion' => '4.x', // 👈 thêm dòng này để tương thích Bootstrap 4
             ]);
             ?>
         </div>

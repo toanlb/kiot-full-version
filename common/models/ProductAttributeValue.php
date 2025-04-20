@@ -17,7 +17,7 @@ use yii\db\Expression;
  * @property string $created_at
  * @property string $updated_at
  *
- * @property ProductAttribute $attribute
+ * @property ProductAttribute $prattribute
  * @property Product $product
  */
 class ProductAttributeValue extends ActiveRecord
@@ -83,7 +83,7 @@ class ProductAttributeValue extends ActiveRecord
      */
     public function getAttribute0()
     {
-        return $this->hasOne(ProductAttribute::class, ['id' => 'attribute_id']);
+        return $this->hasOne(ProductAttribute::class, ['id' => 'attribute_id'])->one();
     }
 
     /**

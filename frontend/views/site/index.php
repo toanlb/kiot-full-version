@@ -25,7 +25,7 @@ $this->title = 'Quản lý POS';
                 <i class="fas fa-clock"></i>
             </div>
             <?php if (!$activeShift): ?>
-                <a href="<?= Url::to(['shift/create']) ?>" class="small-box-footer">
+                <a href="<?= Url::to(['shift/open']) ?>" class="small-box-footer">
                     Mở ca làm việc <i class="fas fa-arrow-circle-right"></i>
                 </a>
             <?php else: ?>

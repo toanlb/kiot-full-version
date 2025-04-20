@@ -6,6 +6,14 @@ use backend\assets\AppAsset;
 use yii\helpers\Html;
 
 AppAsset::register($this);
+$this->registerCssFile('https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css');
+$this->registerCssFile('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css');
+$this->registerCssFile('https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css');
+
+$this->registerJsFile('https://code.jquery.com/jquery-3.6.0.min.js');
+$this->registerJsFile('https://code.jquery.com/ui/1.12.1/jquery-ui.min.js');
+$this->registerJsFile('https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js', ['depends' => 'yii\web\JqueryAsset']);
+$this->registerJsFile('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', ['depends' => 'yii\web\JqueryAsset']);
 ?>
 <?php $this->beginPage() ?>
 <!DOCTYPE html>

@@ -194,7 +194,8 @@ $priceTier = [
                         <div class="card product-card mb-4">
                             <div class="product-img-container">
                                 <?php
-                                $mainImage = $model->getMainImage();
+                                $mainImage = $model->getMainImage()->one();
+                                $mainImage = $mainImage ? $mainImage : null;
                                 if ($mainImage) {
                                     echo Html::img('@web/' . $mainImage->image, [
                                         'class' => 'card-img-top product-img',
