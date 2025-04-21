@@ -796,6 +796,7 @@ $this->registerJsFile('@web/js/pos.js', ['depends' => [\yii\web\JqueryAsset::cla
     <tr class="cart-item" data-id="${product_id}">
         <td>
             <div class="d-flex align-items-center">
+
                 <div>
                     <div class="cart-item-name">${name}</div>
                     <div class="cart-item-price">${formatted_price}</div>

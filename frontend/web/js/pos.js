@@ -3,6 +3,37 @@
  */
 
 $(document).ready(function() {
+    // Setup CSRF token for AJAX requests
+    const csrfToken = $('meta[name="csrf-token"]').attr('content');
+    const csrfParam = $('meta[name="csrf-param"]').attr('content');
+    
+    // Add CSRF token to all AJAX requests
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+                
+                // If data is sent as FormData, add CSRF token to it
+                if (settings.data instanceof FormData) {
+                    settings.data.append(csrfParam, csrfToken);
+                } 
+                // If data is a string, add CSRF token
+                else if (typeof settings.data === 'string') {
+                    settings.data = settings.data + '&' + csrfParam + '=' + csrfToken;
+                }
+                // If data is an object, add CSRF token
+                else if (settings.data && typeof settings.data === 'object' && !(settings.data instanceof FormData)) {
+                    settings.data[csrfParam] = csrfToken;
+                }
+                // If no data sent, create an object with CSRF token
+                else {
+                    settings.data = {};
+                    settings.data[csrfParam] = csrfToken;
+                }
+            }
+        }
+    });
+    
     // Variables
     let cart = [];
     let currentCategoryId = '';

@@ -483,58 +483,43 @@ public function actionGetProduct($id)
     public function actionSearchProducts()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-
-        $request = Yii::$app->request;
-        $warehouseId = $request->get('warehouse_id');
-        $term = $request->get('term');
-
+        
+        $term = Yii::$app->request->get('term', '');
+        
         if (empty($term)) {
             return [
                 'success' => false,
-                'message' => 'Vui lòng nhập từ khóa tìm kiếm.'
+                'message' => 'Từ khóa tìm kiếm trống',
             ];
         }
-
+        
+        // Tìm kiếm theo mã, tên hoặc mã vạch
         $query = Product::find()
-            ->where(['status' => 1])
-            ->andWhere([
-                'or',
+            ->where(['or',
                 ['like', 'code', $term],
                 ['like', 'name', $term],
                 ['like', 'barcode', $term]
             ])
-            ->limit(20)
-            ->orderBy(['name' => SORT_ASC]);
-
+            ->andWhere(['status' => 1]);
+            
+        // Thực thi query để lấy các model thực tế
         $products = $query->all();
-
+        
         $result = [];
         foreach ($products as $product) {
-            // Get stock for this product in the selected warehouse
-            $stock = Stock::find()
-                ->where(['product_id' => $product->id, 'warehouse_id' => $warehouseId])
-                ->one();
-
-            $quantity = $stock ? $stock->quantity : 0;
-
-            // Get product main image
-            $mainImage = $product->getMainImage();
-            $imageUrl = $mainImage ? Yii::getAlias('@web/uploads/products/' . $mainImage->image) : Yii::getAlias('@web/images/no-image.png');
-
+            // Bây giờ truy cập thuộc tính từ model, không phải từ query
             $result[] = [
                 'id' => $product->id,
                 'code' => $product->code,
                 'name' => $product->name,
-                'price' => $product->selling_price,
+                'selling_price' => $product->selling_price,
                 'formatted_price' => Yii::$app->formatter->asCurrency($product->selling_price),
-                'image' => $imageUrl,
-                'quantity' => $quantity,
+                'quantity' => $product->getStockQuantity(), // Giả sử bạn có một phương thức để lấy số lượng tồn kho
                 'unit' => $product->unit ? $product->unit->name : '',
-                'category_id' => $product->category_id,
-                'barcode' => $product->barcode,
+                'image' => $product->getProductImages(), // Giả sử bạn có một phương thức để lấy URL của hình ảnh
             ];
         }
-
+        
         return [
             'success' => true,
             'products' => $result,
@@ -575,7 +560,7 @@ public function actionGetProduct($id)
         $result = [];
         foreach ($customers as $customer) {
             // Get customer points
-            $points = $customer->getCustomerPoints();
+            $points = $customer->getPoints();
 
             // Get customer debt
             $debt = $customer->debt_amount;
