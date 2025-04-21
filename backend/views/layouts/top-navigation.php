@@ -19,7 +19,7 @@ $menuGroups = [
     'order' => ['order', 'return', 'discount'],
     'customer' => ['customer', 'customer-group', 'customer-debt'],
     'supplier' => ['supplier', 'supplier-product', 'supplier-debt'],
-    'warranty' => ['warranty', 'warranty-status'],
+    'warranty' => ['warranty', 'warranty-status', 'warranty-detail'],
     'finance' => ['receipt', 'payment', 'cash-book', 'shift'],
     'report' => ['report', 'report/sales', 'report/inventory', 'report/finance', 'report/customer'],
     'user' => ['user', 'user-profile', 'auth'],
@@ -154,9 +154,6 @@ try {
                         <a class="dropdown-item <?= $currentUrl === 'supplier' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/supplier']) ?>">
                             <i class="fas fa-industry mr-2"></i> Danh sách nhà cung cấp
                         </a>
-                        <a class="dropdown-item <?= $currentUrl === 'supplier-product' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/supplier-product']) ?>">
-                            <i class="fas fa-boxes mr-2"></i> Sản phẩm nhà cung cấp
-                        </a>
                         <a class="dropdown-item <?= $currentUrl === 'supplier-debt' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/supplier-debt']) ?>">
                             <i class="fas fa-file-invoice-dollar mr-2"></i> Công nợ nhà cung cấp
                         </a>
@@ -181,9 +178,6 @@ try {
                         <a class="dropdown-item <?= $currentUrl === 'customer-group' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/customer-group']) ?>">
                             <i class="fas fa-layer-group mr-2"></i> Nhóm khách hàng
                         </a>
-                        <a class="dropdown-item <?= $currentUrl === 'customer-debt' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/customer-debt']) ?>">
-                            <i class="fas fa-hand-holding-usd mr-2"></i> Công nợ khách hàng
-                        </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item" href="<?= \yii\helpers\Url::to(['/customer/create']) ?>">
                             <i class="fas fa-plus-circle mr-2 text-success"></i> Thêm khách hàng mới
@@ -202,18 +196,36 @@ try {
                         <a class="dropdown-item <?= $currentUrl === 'order' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/order']) ?>">
                             <i class="fas fa-clipboard-list mr-2"></i> Danh sách đơn hàng
                         </a>
-                        <a class="dropdown-item <?= $currentUrl === 'return' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/return']) ?>">
-                            <i class="fas fa-undo-alt mr-2"></i> Đơn trả hàng
-                        </a>
-                        <a class="dropdown-item <?= $currentUrl === 'discount' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/discount']) ?>">
-                            <i class="fas fa-percent mr-2"></i> Khuyến mãi
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="<?= \yii\helpers\Url::to(['/order/create']) ?>">
-                            <i class="fas fa-plus-circle mr-2 text-success"></i> Tạo đơn hàng mới
                         </a>
                         <a class="dropdown-item" href="<?= \yii\helpers\Url::to(['/pos']) ?>">
                             <i class="fas fa-cash-register mr-2 text-primary"></i> Màn hình bán hàng (POS)
+                        </a>
+                    </div>
+                </li>
+                <?php endif; ?>
+                
+                <!-- Quản lý bảo hành -->
+                <?php if (userHasAccess('warranty')): ?>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle <?= $activeGroup === 'warranty' ? 'active' : '' ?>" href="#" id="warrantyDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-shield-alt mr-1"></i> Bảo hành
+                    </a>
+                    <div class="dropdown-menu animate slideIn" aria-labelledby="warrantyDropdown">
+                        <a class="dropdown-item <?= $currentUrl === 'warranty' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/warranty']) ?>">
+                            <i class="fas fa-clipboard-list mr-2"></i> Danh sách bảo hành
+                        </a>
+                        <a class="dropdown-item <?= $currentUrl === 'warranty-detail' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/warranty-detail']) ?>">
+                            <i class="fas fa-tools mr-2"></i> Lịch sử sửa chữa
+                        </a>
+                        <a class="dropdown-item <?= $currentUrl === 'warranty-status' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/warranty-status']) ?>">
+                            <i class="fas fa-tag mr-2"></i> Trạng thái bảo hành
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="<?= \yii\helpers\Url::to(['/warranty/create']) ?>">
+                            <i class="fas fa-plus-circle mr-2 text-success"></i> Tạo phiếu bảo hành
+                        </a>
+                        <a class="dropdown-item" href="<?= \yii\helpers\Url::to(['/warranty/report']) ?>">
+                            <i class="fas fa-chart-line mr-2 text-info"></i> Báo cáo bảo hành
                         </a>
                     </div>
                 </li>
@@ -298,14 +310,6 @@ try {
                             <i class="fas fa-plus mr-2 text-success"></i> Thêm sản phẩm mới
                         </a>
                         <?php endif; ?>
-                        
-                        <?php if (userHasAccess('order')): ?>
-                        <div class="dropdown-divider"></div>
-                        <a href="<?= \yii\helpers\Url::to(['/order/create']) ?>" class="dropdown-item">
-                            <i class="fas fa-cart-plus mr-2 text-primary"></i> Tạo đơn hàng mới
-                        </a>
-                        <?php endif; ?>
-                        
                         <?php if (userHasAccess('warehouse')): ?>
                         <div class="dropdown-divider"></div>
                         <a href="<?= \yii\helpers\Url::to(['/stock-in/create']) ?>" class="dropdown-item">
@@ -317,6 +321,13 @@ try {
                         <div class="dropdown-divider"></div>
                         <a href="<?= \yii\helpers\Url::to(['/customer/create']) ?>" class="dropdown-item">
                             <i class="fas fa-user-plus mr-2 text-warning"></i> Thêm khách hàng mới
+                        </a>
+                        <?php endif; ?>
+                        
+                        <?php if (userHasAccess('warranty')): ?>
+                        <div class="dropdown-divider"></div>
+                        <a href="<?= \yii\helpers\Url::to(['/warranty/create']) ?>" class="dropdown-item">
+                            <i class="fas fa-shield-alt mr-2 text-info"></i> Tạo phiếu bảo hành
                         </a>
                         <?php endif; ?>
                         
@@ -360,13 +371,15 @@ try {
                 <!-- User Account Menu -->
                 <li class="nav-item dropdown user-menu">
                     <a href="#" class="nav-link dropdown-toggle" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <img src="<?= Yii::$app->request->baseUrl ?>/img/user2-160x160.jpg" class="user-image img-circle" alt="User Image">
+             
+                        <img src="https://adminlte.io/themes/v3/dist/img/user2-160x160.jpg" class="user-image img-circle" alt="User Image">
                         <span class="d-none d-md-inline"><?= Yii::$app->user->identity->full_name ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-right animate slideIn">
                         <!-- User image -->
                         <li class="user-header bg-primary">
-                            <img src="<?= Yii::$app->request->baseUrl ?>/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
+     
+                            <img src="https://adminlte.io/themes/v3/dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
                             <p>
                                 <?= Yii::$app->user->identity->full_name ?>
                                 <small>Thành viên từ <?= date('m/Y', Yii::$app->user->identity->created_at) ?></small>
@@ -376,19 +389,16 @@ try {
                         <li class="user-body">
                             <div class="row">
                                 <div class="col-4 text-center">
-                                    <a href="<?= \yii\helpers\Url::to(['/user/view?id='.$currentUserId]) ?>" class="btn btn-default btn-flat btn-sm">Hồ sơ</a>
-                                </div>
-                                <div class="col-4 text-center">
                                     <a href="<?= \yii\helpers\Url::to(['/user/settings']) ?>" class="btn btn-default btn-flat btn-sm">Cài đặt</a>
                                 </div>
-                                <div class="col-4 text-center">
-                                    <a href="<?= \yii\helpers\Url::to(['/user/activity']) ?>" class="btn btn-default btn-flat btn-sm">Hoạt động</a>
+                                <div class="col-5 text-center">
+                                    <a href="<?= \yii\helpers\Url::to(['/user/login-history?id='.$currentUserId]) ?>" class="btn btn-default btn-flat btn-sm">Hoạt động</a>
                                 </div>
                             </div>
                         </li>
                         <!-- Menu Footer-->
                         <li class="user-footer">
-                            <a href="<?= \yii\helpers\Url::to(['/user/profile']) ?>" class="btn btn-default btn-flat">Thông tin cá nhân</a>
+                            <a href="<?= \yii\helpers\Url::to(['/user/view?id='.$currentUserId]) ?>" class="btn btn-default btn-flat">Thông tin cá nhân</a>
                             <a href="<?= \yii\helpers\Url::to(['/site/logout']) ?>" class="btn btn-danger btn-flat float-right" data-method="post">Đăng xuất</a>
                         </li>
                     </ul>

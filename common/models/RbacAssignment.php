@@ -17,32 +17,32 @@ class RbacAssignment extends Model
      * @var string The name of the role
      */
     public $role;
-    
+
     /**
      * @var array Selected permissions
      */
     public $permissions = [];
-    
+
     /**
      * @var array List of module permissions to assign
      */
     public $modules = [];
-    
+
     /**
      * @var array List of controller permissions to assign
      */
     public $controllers = [];
-    
+
     /**
      * @var array List of action permissions to assign
      */
     public $actions = [];
-    
+
     /**
      * @var \yii\rbac\ManagerInterface Auth manager
      */
     private $_authManager;
-    
+
     /**
      * @inheritdoc
      */
@@ -51,7 +51,7 @@ class RbacAssignment extends Model
         parent::init();
         $this->_authManager = Yii::$app->authManager;
     }
-    
+
     /**
      * @inheritdoc
      */
@@ -63,7 +63,7 @@ class RbacAssignment extends Model
             [['permissions', 'modules', 'controllers', 'actions'], 'safe'],
         ];
     }
-    
+
     /**
      * Validates that the role exists
      */
@@ -73,7 +73,7 @@ class RbacAssignment extends Model
             $this->addError($attribute, 'Role does not exist.');
         }
     }
-    
+
     /**
      * @inheritdoc
      */
@@ -87,7 +87,7 @@ class RbacAssignment extends Model
             'actions' => 'Actions',
         ];
     }
-    
+
     /**
      * Loads the permissions of a role
      * 
@@ -97,19 +97,19 @@ class RbacAssignment extends Model
     public function loadRolePermissions($roleName)
     {
         $this->role = $roleName;
-        
+
         $role = $this->_authManager->getRole($roleName);
         if (!$role) {
             return false;
         }
-        
+
         // Get all permissions assigned to this role
         $rolePermissions = $this->_authManager->getPermissionsByRole($roleName);
         $this->permissions = array_keys($rolePermissions);
-        
+
         return true;
     }
-    
+
     /**
      * Gets all available roles
      * 
@@ -119,7 +119,7 @@ class RbacAssignment extends Model
     {
         return ArrayHelper::map($this->_authManager->getRoles(), 'name', 'description');
     }
-    
+
     /**
      * Gets all available permissions
      * 
@@ -129,7 +129,7 @@ class RbacAssignment extends Model
     {
         return ArrayHelper::map($this->_authManager->getPermissions(), 'name', 'description');
     }
-    
+
     /**
      * Saves the role permissions
      * 
@@ -137,60 +137,147 @@ class RbacAssignment extends Model
      */
     public function save()
     {
+        Yii::info('==== BEGIN SAVE PERMISSIONS ====', 'rbac');
+        
         if (!$this->validate()) {
+            Yii::error('Validation failed: ' . json_encode($this->errors), 'rbac');
             return false;
         }
         
         $role = $this->_authManager->getRole($this->role);
+        if (!$role) {
+            Yii::error('Role not found: ' . $this->role, 'rbac');
+            return false;
+        }
+        
+        Yii::info('Role found: ' . $role->name, 'rbac');
+        
+        // Debug AuthManager
+        Yii::info('AuthManager class: ' . get_class($this->_authManager), 'rbac');
+        
+        // Get existing permissions before
+        $existingPermissions = $this->_authManager->getPermissionsByRole($role->name);
+        Yii::info('Existing permissions count: ' . count($existingPermissions), 'rbac');
+        
         $transaction = Yii::$app->db->beginTransaction();
         
         try {
             // Remove all existing permissions
-            $this->_authManager->removeChildren($role);
+            Yii::info('Removing all existing permissions for role: ' . $role->name, 'rbac');
+            $removeResult = $this->_authManager->removeChildren($role);
+            Yii::info('removeChildren result: ' . ($removeResult ? 'true' : 'false'), 'rbac');
             
-            // Add selected permissions
-            $allPermissions = [];
+            // Check if permissions were removed
+            $afterRemovePermissions = $this->_authManager->getPermissionsByRole($role->name);
+            Yii::info('Permissions after removeChildren: ' . count($afterRemovePermissions), 'rbac');
             
-            // Add module-level permissions
-            if (!empty($this->modules)) {
-                $allPermissions = array_merge($allPermissions, $this->modules);
+            // Process inputs as arrays
+            if (is_string($this->modules)) {
+                $modulesArray = explode(',', $this->modules);
+            } else {
+                $modulesArray = is_array($this->modules) ? $this->modules : [];
             }
             
-            // Add controller-level permissions
-            if (!empty($this->controllers)) {
-                $allPermissions = array_merge($allPermissions, $this->controllers);
+            if (is_string($this->controllers)) {
+                $controllersArray = explode(',', $this->controllers);
+            } else {
+                $controllersArray = is_array($this->controllers) ? $this->controllers : [];
             }
             
-            // Add action-level permissions
-            if (!empty($this->actions)) {
-                $allPermissions = array_merge($allPermissions, $this->actions);
+            if (is_string($this->actions)) {
+                $actionsArray = explode(',', $this->actions);
+            } else {
+                $actionsArray = is_array($this->actions) ? $this->actions : [];
             }
             
-            // Add directly selected permissions
-            if (!empty($this->permissions)) {
-                $allPermissions = array_merge($allPermissions, $this->permissions);
+            if (is_string($this->permissions)) {
+                $permissionsArray = explode(',', $this->permissions);
+            } else {
+                $permissionsArray = is_array($this->permissions) ? $this->permissions : [];
             }
             
-            // Remove duplicates
-            $allPermissions = array_unique($allPermissions);
+            Yii::info('Modules array: ' . json_encode($modulesArray), 'rbac');
+            Yii::info('Controllers array: ' . json_encode($controllersArray), 'rbac');
+            Yii::info('Actions array: ' . json_encode($actionsArray), 'rbac');
+            Yii::info('Direct permissions: ' . json_encode($permissionsArray), 'rbac');
             
-            // Add to role
+            // Combine all permissions
+            $allPermissions = array_merge([], $modulesArray, $controllersArray, $actionsArray, $permissionsArray);
+            $allPermissions = array_filter(array_unique($allPermissions));
+            
+            Yii::info('Total unique permissions to add: ' . count($allPermissions), 'rbac');
+            Yii::info('All permissions: ' . json_encode($allPermissions), 'rbac');
+            
+            // Try to add each permission
+            $addedCount = 0;
+            $failedPermissions = [];
+            
             foreach ($allPermissions as $permissionName) {
+                if (empty($permissionName)) continue;
+                
                 $permission = $this->_authManager->getPermission($permissionName);
-                if ($permission) {
-                    $this->_authManager->addChild($role, $permission);
+                
+                if (!$permission) {
+                    Yii::warning('Permission does not exist: ' . $permissionName, 'rbac');
+                    $failedPermissions[] = $permissionName . ' (not found)';
+                    continue;
+                }
+                
+                Yii::info('Adding permission: ' . $permissionName, 'rbac');
+                
+                try {
+                    $addResult = $this->_authManager->addChild($role, $permission);
+                    
+                    if ($addResult) {
+                        $addedCount++;
+                        Yii::info('Permission added successfully: ' . $permissionName, 'rbac');
+                    } else {
+                        Yii::warning('Failed to add permission: ' . $permissionName, 'rbac');
+                        $failedPermissions[] = $permissionName;
+                    }
+                } catch (\Exception $e) {
+                    Yii::error('Exception adding permission ' . $permissionName . ': ' . $e->getMessage(), 'rbac');
+                    $failedPermissions[] = $permissionName . ' (' . $e->getMessage() . ')';
                 }
             }
             
-            $transaction->commit();
-            return true;
+            Yii::info('Added permissions count: ' . $addedCount . ' out of ' . count($allPermissions), 'rbac');
+            
+            if (!empty($failedPermissions)) {
+                Yii::warning('Failed to add permissions: ' . json_encode($failedPermissions), 'rbac');
+            }
+            
+            // Check permissions after adding
+            $finalPermissions = $this->_authManager->getPermissionsByRole($role->name);
+            Yii::info('Final permissions count: ' . count($finalPermissions), 'rbac');
+            
+            // Check directly in database
+            $count = Yii::$app->db->createCommand('SELECT COUNT(*) FROM {{%auth_item_child}} WHERE parent=:parent', [
+                ':parent' => $role->name
+            ])->queryScalar();
+            
+            Yii::info('Database records count in auth_item_child: ' . $count, 'rbac');
+            
+            // Final success check
+            if ($addedCount > 0 || count($finalPermissions) > 0) {
+                $transaction->commit();
+                Yii::info('Transaction committed', 'rbac');
+                Yii::info('==== END SAVE PERMISSIONS: SUCCESS ====', 'rbac');
+                return true;
+            } else {
+                $transaction->rollBack();
+                Yii::error('No permissions were added, rolling back transaction', 'rbac');
+                Yii::info('==== END SAVE PERMISSIONS: FAILED ====', 'rbac');
+                return false;
+            }
         } catch (\Exception $e) {
             $transaction->rollBack();
-            Yii::error('Error saving role permissions: ' . $e->getMessage(), 'rbac');
+            Yii::error('Exception in save(): ' . $e->getMessage() . "\n" . $e->getTraceAsString(), 'rbac');
+            Yii::info('==== END SAVE PERMISSIONS: ERROR ====', 'rbac');
             return false;
         }
     }
-    
+
     /**
      * Creates a new role
      * 
@@ -204,7 +291,7 @@ class RbacAssignment extends Model
             Yii::error("Role {$name} already exists", 'rbac');
             return null;
         }
-        
+
         try {
             $role = $this->_authManager->createRole($name);
             $role->description = $description;
@@ -215,7 +302,7 @@ class RbacAssignment extends Model
             return null;
         }
     }
-    
+
     /**
      * Updates an existing role
      * 
@@ -230,7 +317,7 @@ class RbacAssignment extends Model
             Yii::error("Role {$name} does not exist", 'rbac');
             return false;
         }
-        
+
         try {
             $role->description = $description;
             $this->_authManager->update($name, $role);
@@ -240,7 +327,7 @@ class RbacAssignment extends Model
             return false;
         }
     }
-    
+
     /**
      * Deletes a role
      * 
@@ -254,7 +341,7 @@ class RbacAssignment extends Model
             Yii::error("Role {$name} does not exist", 'rbac');
             return false;
         }
-        
+
         try {
             $this->_authManager->remove($role);
             return true;
@@ -263,7 +350,7 @@ class RbacAssignment extends Model
             return false;
         }
     }
-    
+
     /**
      * Checks if a permission is assigned to a role
      * 
@@ -275,11 +362,11 @@ class RbacAssignment extends Model
     {
         $role = $this->_authManager->getRole($roleName);
         $permission = $this->_authManager->getPermission($permissionName);
-        
+
         if (!$role || !$permission) {
             return false;
         }
-        
+
         return $this->_authManager->hasChild($role, $permission);
     }
 }

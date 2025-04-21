@@ -30,12 +30,15 @@ $(function () {
     setInterval(refreshDashboardData, refreshInterval);
     
     // Khởi tạo các datepicker
-    $('.datepicker').datepicker({
-        format: 'dd/mm/yyyy',
-        autoclose: true,
-        todayHighlight: true,
-        language: 'vi'
-    });
+    if ($.fn.datepicker) {
+        $('.datepicker').datepicker({
+            format: 'dd/mm/yyyy',
+            autoclose: true,
+            todayHighlight: true,
+            language: 'vi'
+        });
+    }
+   
     
     // Khởi tạo Select2 cho các dropdown
     $('.select2').select2({

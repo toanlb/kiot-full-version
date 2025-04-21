@@ -14,6 +14,7 @@ $this->params['breadcrumbs'][] = $this->title;
 
 $this->registerJs("
     $('#scan-form').on('beforeSubmit', function(e) {
+        e.preventDefault();
         var form = $(this);
         var formData = form.serialize();
         
@@ -23,8 +24,26 @@ $this->registerJs("
             url: form.attr('action'),
             type: 'POST',
             data: formData,
-            success: function(data) {
-                $('#scan-results').html(data);
+            success: function(response) {
+                // Kiểm tra xem response có dạng HTML không
+                if (typeof response === 'string' && response.includes('<!DOCTYPE html>')) {
+                    // Trích xuất chỉ phần scan-results nếu có
+                    var tempDiv = $('<div></div>').append(response);
+                    var resultsContent = tempDiv.find('#scan-results').html();
+                    
+                    if (resultsContent) {
+                        $('#scan-results').html(resultsContent);
+                    } else {
+                        // Nếu không tìm thấy phần scan-results, hiển thị toàn bộ response
+                        $('#scan-results').html(response);
+                    }
+                } else {
+                    // Không phải HTML, hiển thị trực tiếp
+                    $('#scan-results').html(response);
+                }
+                
+                // Hiển thị nút Update Permissions
+                $('#update-permissions-btn').show();
             },
             error: function(xhr) {
                 $('#scan-results').html('<div class=\"alert alert-danger\">Error: ' + xhr.responseText + '</div>');
@@ -33,7 +52,6 @@ $this->registerJs("
         
         return false;
     });
-    
     $('#update-permissions-btn').on('click', function(e) {
         e.preventDefault();
         var btn = $(this);

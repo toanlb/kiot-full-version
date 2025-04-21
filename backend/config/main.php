@@ -31,7 +31,9 @@ return [
             'targets' => [
                 [
                     'class' => 'yii\log\FileTarget',
-                    'levels' => ['error', 'warning'],
+                    'levels' => ['error', 'warning', 'info'], // thêm info để thấy log info
+                    'categories' => ['rbac'], // thêm dòng này
+                    'logFile' => '@app/runtime/logs/rbac.log', // có thể chỉ định file riêng
                 ],
             ],
         ],

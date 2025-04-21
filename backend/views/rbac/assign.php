@@ -205,6 +205,10 @@ $this->registerJs("
             data: formData,
             dataType: 'json',
             success: function(response) {
+            // Kiểm tra xem dữ liệu có đúng định dạng không
+console.log('Modules:', $('#rbacassignment-modules').val());
+console.log('Controllers:', $('#rbacassignment-controllers').val());
+console.log('Actions:', $('#rbacassignment-actions').val());
                 if (response.success) {
                     toastr.success(response.message);
                 } else {

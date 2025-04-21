@@ -126,6 +126,11 @@ class WarrantyDetail extends ActiveRecord
         return $this->hasOne(WarrantyStatus::class, ['id' => 'status_id']);
     }
 
+    public function getHandler()
+    {
+        return $this->hasOne(\common\models\User::class, ['id' => 'handled_by']);
+    }
+
     /**
      * Gets query for [[Warranty]].
      *
@@ -155,10 +160,10 @@ class WarrantyDetail extends ActiveRecord
         if (parent::beforeSave($insert)) {
             // Calculate total cost
             $this->calculateTotalCost();
-            
+
             return true;
         }
-        
+
         return false;
     }
 
@@ -171,7 +176,7 @@ class WarrantyDetail extends ActiveRecord
     public function afterSave($insert, $changedAttributes)
     {
         parent::afterSave($insert, $changedAttributes);
-        
+
         // Update warranty status
         $this->updateWarrantyStatus();
     }
@@ -182,7 +187,7 @@ class WarrantyDetail extends ActiveRecord
     protected function updateWarrantyStatus()
     {
         $warranty = $this->warranty;
-        
+
         if ($warranty) {
             $warranty->status_id = $this->status_id;
             $warranty->save(false);
