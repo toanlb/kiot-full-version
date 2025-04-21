@@ -7,7 +7,7 @@ use backend\models\search\WarehouseSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
+use common\components\AccessControl; 
 
 class WarehouseController extends Controller
 {
@@ -17,9 +17,10 @@ class WarehouseController extends Controller
             'access' => [
                 'class' => AccessControl::class,
                 'rules' => [
-                    [
+                   [
                         'allow' => true,
-                        'roles' => ['manageProducts'],
+                        'actions' => ['index', 'view', 'create', 'update', 'delete'],
+                        'roles' => ['manageWarehouses'],
                     ],
                 ],
             ],

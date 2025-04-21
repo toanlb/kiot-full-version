@@ -13,7 +13,8 @@ use common\models\ProductUnit;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
+use common\components\AccessControl; // Thay thế AccessControl của Yii2
+use common\components\WarehouseFilter; // Bổ sung WarehouseFilter nếu cần thiết
 use yii\web\UploadedFile;
 use yii\helpers\ArrayHelper;
 use yii\web\Response;
@@ -31,17 +32,32 @@ class ProductController extends Controller
     {
         return [
             'access' => [
-                'class' => AccessControl::class,
+                'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'actions' => ['index', 'view', 'create', 'update', 'delete', 'bulk-delete', 'validate', 'upload-image', 'delete-image', 'import', 'export', 'get-categories', 'get-units'],
                         'allow' => true,
-                        'roles' => ['@'], // Authenticated users
+                        'actions' => ['index', 'view'],
+                        'roles' => ['viewProducts'],
+                    ],
+                    [
+                        'allow' => true,
+                        'actions' => ['create'],
+                        'roles' => ['createProduct'],
+                    ],
+                    [
+                        'allow' => true,
+                        'actions' => ['update', 'update-price'],
+                        'roles' => ['updateProduct'],
+                    ],
+                    [
+                        'allow' => true,
+                        'actions' => ['delete'],
+                        'roles' => ['deleteProduct'],
                     ],
                 ],
             ],
             'verbs' => [
-                'class' => VerbFilter::class,
+                'class' => VerbFilter::className(),
                 'actions' => [
                     'delete' => ['POST'],
                     'bulk-delete' => ['POST'],

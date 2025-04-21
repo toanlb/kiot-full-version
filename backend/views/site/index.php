@@ -2,602 +2,673 @@
 /* @var $this yii\web\View */
 
 $this->title = 'Dashboard';
+$this->params['icon'] = 'fas fa-tachometer-alt';
+$this->params['description'] = 'Tổng quan về hoạt động kinh doanh của bạn. Cập nhật vào ' . date('H:i, d/m/Y');
+
+// Định dạng tiền tệ
+$formatter = Yii::$app->formatter;
 ?>
 
-<!-- Info boxes -->
-<div class="row">
-    <div class="col-12 col-sm-6 col-md-3">
-        <div class="info-box">
-            <span class="info-box-icon bg-info elevation-1"><i class="fas fa-shopping-cart"></i></span>
-
-            <div class="info-box-content">
-                <span class="info-box-text">Đơn hàng hôm nay</span>
-                <span class="info-box-number">
-                    15
-                </span>
+<div class="dashboard-container">
+    <!-- Thanh công cụ -->
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-primary" id="refresh-dashboard">
+                    <i class="fas fa-sync-alt mr-1"></i> Làm mới dữ liệu
+                </button>
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="#" data-toggle="modal" data-target="#timeRangeModal">
+                        <i class="fas fa-calendar-alt mr-1"></i> Thay đổi khoảng thời gian
+                    </a>
+                    <a class="dropdown-item" href="#" data-toggle="modal" data-target="#dashboardSettingsModal">
+                        <i class="fas fa-cog mr-1"></i> Tùy chỉnh dashboard
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="<?= \yii\helpers\Url::to(['/report/export-dashboard']) ?>">
+                        <i class="fas fa-file-export mr-1"></i> Xuất dữ liệu
+                    </a>
+                </div>
             </div>
-            <!-- /.info-box-content -->
-        </div>
-        <!-- /.info-box -->
-    </div>
-    <!-- /.col -->
-    <div class="col-12 col-sm-6 col-md-3">
-        <div class="info-box mb-3">
-            <span class="info-box-icon bg-danger elevation-1"><i class="fas fa-money-bill"></i></span>
-
-            <div class="info-box-content">
-                <span class="info-box-text">Doanh thu hôm nay</span>
-                <span class="info-box-number">5,200,000 đ</span>
+            <div class="btn-group ml-2">
+                <button type="button" class="btn btn-outline-success">
+                    <i class="fas fa-calendar-day mr-1"></i> Hôm nay
+                </button>
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="#">Hôm nay</a>
+                    <a class="dropdown-item" href="#">Hôm qua</a>
+                    <a class="dropdown-item" href="#">7 ngày qua</a>
+                    <a class="dropdown-item" href="#">30 ngày qua</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="#">Tháng này</a>
+                    <a class="dropdown-item" href="#">Tháng trước</a>
+                </div>
             </div>
-            <!-- /.info-box-content -->
         </div>
-        <!-- /.info-box -->
+        <div class="col-md-4 text-right">
+            <span class="text-muted">Cập nhật lần cuối: <span id="last-update-time"><?= date('d/m/Y H:i:s') ?></span></span>
+        </div>
     </div>
-    <!-- /.col -->
 
-    <!-- fix for small devices only -->
-    <div class="clearfix hidden-md-up"></div>
-
-    <div class="col-12 col-sm-6 col-md-3">
-        <div class="info-box mb-3">
-            <span class="info-box-icon bg-success elevation-1"><i class="fas fa-users"></i></span>
-
-            <div class="info-box-content">
-                <span class="info-box-text">Khách hàng mới</span>
-                <span class="info-box-number">7</span>
+    <!-- Thống kê tổng quan -->
+    <div class="row">
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-gradient-primary rounded-lg shadow-sm">
+                <div class="inner px-3 py-3">
+                    <h3 class="mb-1" id="today-orders-count"><?= $todayOrders ?></h3>
+                    <p class="mb-0">Đơn hàng hôm nay</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-shopping-bag"></i>
+                </div>
+                <a href="<?= \yii\helpers\Url::to(['/order']) ?>" class="small-box-footer py-2">
+                    Chi tiết <i class="fas fa-arrow-circle-right ml-1"></i>
+                </a>
             </div>
-            <!-- /.info-box-content -->
         </div>
-        <!-- /.info-box -->
-    </div>
-    <!-- /.col -->
-    <div class="col-12 col-sm-6 col-md-3">
-        <div class="info-box mb-3">
-            <span class="info-box-icon bg-warning elevation-1"><i class="fas fa-exclamation-triangle"></i></span>
-
-            <div class="info-box-content">
-                <span class="info-box-text">Sản phẩm sắp hết hàng</span>
-                <span class="info-box-number">12</span>
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-gradient-success rounded-lg shadow-sm">
+                <div class="inner px-3 py-3">
+                    <h3 class="mb-1" id="today-revenue"><?= $formatter->asCurrency($todayRevenue) ?></h3>
+                    <p class="mb-0">Doanh thu hôm nay</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <a href="<?= \yii\helpers\Url::to(['/report/sales']) ?>" class="small-box-footer py-2">
+                    Chi tiết <i class="fas fa-arrow-circle-right ml-1"></i>
+                </a>
             </div>
-            <!-- /.info-box-content -->
         </div>
-        <!-- /.info-box -->
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-gradient-warning rounded-lg shadow-sm">
+                <div class="inner px-3 py-3">
+                    <h3 class="mb-1 text-white" id="low-stock-count"><?= $lowStockProducts ?></h3>
+                    <p class="mb-0 text-white">Sản phẩm sắp hết</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <a href="<?= \yii\helpers\Url::to(['/stock']) ?>" class="small-box-footer py-2">
+                    Chi tiết <i class="fas fa-arrow-circle-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-gradient-info rounded-lg shadow-sm">
+                <div class="inner px-3 py-3">
+                    <h3 class="mb-1" id="new-customers-count"><?= $newCustomers ?></h3>
+                    <p class="mb-0">Khách hàng mới</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <a href="<?= \yii\helpers\Url::to(['/customer']) ?>" class="small-box-footer py-2">
+                    Chi tiết <i class="fas fa-arrow-circle-right ml-1"></i>
+                </a>
+            </div>
+        </div>
     </div>
-    <!-- /.col -->
-</div>
-<!-- /.row -->
 
-<div class="row">
-    <div class="col-md-8">
+    <!-- Biểu đồ và phân tích -->
+    <div class="row">
         <!-- Biểu đồ doanh thu -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title">Báo cáo doanh thu</h5>
-
-                <div class="card-tools">
-                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                    <button type="button" class="btn btn-tool" data-card-widget="remove">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-            <!-- /.card-header -->
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-8">
-                        <p class="text-center">
-                            <strong>Doanh thu: 1 Tháng 5, 2025 - 30 Tháng 5, 2025</strong>
-                        </p>
-
-                        <div class="chart">
-                            <!-- Biểu đồ doanh thu sẽ hiển thị ở đây -->
-                            <canvas id="salesChart" height="220" style="height: 220px;"></canvas>
-                        </div>
-                        <!-- /.chart-responsive -->
-                    </div>
-                    <!-- /.col -->
-                    <div class="col-md-4">
-                        <p class="text-center">
-                            <strong>Chỉ tiêu hoàn thành</strong>
-                        </p>
-
-                        <div class="progress-group">
-                            Đơn hàng hoàn thành
-                            <span class="float-right"><b>160</b>/200</span>
-                            <div class="progress progress-sm">
-                                <div class="progress-bar bg-primary" style="width: 80%"></div>
+        <div class="col-lg-8">
+            <div class="card rounded-lg shadow-sm">
+                <div class="card-header border-0 bg-transparent">
+                    <div class="d-flex justify-content-between">
+                        <h3 class="card-title text-bold">Doanh thu 30 ngày gần đây</h3>
+                        <div class="card-tools d-flex">
+                            <div class="btn-group btn-group-sm mr-2">
+                                <button type="button" class="btn btn-outline-primary chart-type-switch active" data-target="revenue" data-type="line">
+                                    <i class="fas fa-chart-line"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-primary chart-type-switch" data-target="revenue" data-type="bar">
+                                    <i class="fas fa-chart-bar"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-primary chart-type-switch" data-target="revenue" data-type="area">
+                                    <i class="fas fa-chart-area"></i>
+                                </button>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown">
+                                    <i class="fas fa-calendar mr-1"></i> 30 ngày
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-right">
+                                    <a class="dropdown-item time-range-selector" href="#" data-chart="revenue" data-range="7">7 ngày</a>
+                                    <a class="dropdown-item time-range-selector" href="#" data-chart="revenue" data-range="14">14 ngày</a>
+                                    <a class="dropdown-item time-range-selector active" href="#" data-chart="revenue" data-range="30">30 ngày</a>
+                                    <a class="dropdown-item time-range-selector" href="#" data-chart="revenue" data-range="90">90 ngày</a>
+                                </div>
                             </div>
                         </div>
-                        <!-- /.progress-group -->
-
-                        <div class="progress-group">
-                            Doanh thu
-                            <span class="float-right"><b>85</b>/100</span>
-                            <div class="progress progress-sm">
-                                <div class="progress-bar bg-danger" style="width: 85%"></div>
-                            </div>
-                        </div>
-
-                        <!-- /.progress-group -->
-                        <div class="progress-group">
-                            <span class="progress-text">Khách hàng mới</span>
-                            <span class="float-right"><b>30</b>/50</span>
-                            <div class="progress progress-sm">
-                                <div class="progress-bar bg-success" style="width: 60%"></div>
-                            </div>
-                        </div>
-
-                        <!-- /.progress-group -->
-                        <div class="progress-group">
-                            Tỷ lệ chuyển đổi
-                            <span class="float-right"><b>35</b>/50</span>
-                            <div class="progress progress-sm">
-                                <div class="progress-bar bg-warning" style="width: 70%"></div>
-                            </div>
-                        </div>
-                        <!-- /.progress-group -->
-                    </div>
-                    <!-- /.col -->
-                </div>
-                <!-- /.row -->
-            </div>
-            <!-- ./card-body -->
-            <div class="card-footer">
-                <div class="row">
-                    <div class="col-sm-3 col-6">
-                        <div class="description-block border-right">
-                            <span class="description-percentage text-success"><i class="fas fa-caret-up"></i> 17%</span>
-                            <h5 class="description-header">35,210,000 đ</h5>
-                            <span class="description-text">TỔNG DOANH THU</span>
-                        </div>
-                        <!-- /.description-block -->
-                    </div>
-                    <!-- /.col -->
-                    <div class="col-sm-3 col-6">
-                        <div class="description-block border-right">
-                            <span class="description-percentage text-warning"><i class="fas fa-caret-left"></i> 0%</span>
-                            <h5 class="description-header">10,390,000 đ</h5>
-                            <span class="description-text">TỔNG CHI PHÍ</span>
-                        </div>
-                        <!-- /.description-block -->
-                    </div>
-                    <!-- /.col -->
-                    <div class="col-sm-3 col-6">
-                        <div class="description-block border-right">
-                            <span class="description-percentage text-success"><i class="fas fa-caret-up"></i> 20%</span>
-                            <h5 class="description-header">24,813,000 đ</h5>
-                            <span class="description-text">TỔNG LỢI NHUẬN</span>
-                        </div>
-                        <!-- /.description-block -->
-                    </div>
-                    <!-- /.col -->
-                    <div class="col-sm-3 col-6">
-                        <div class="description-block">
-                            <span class="description-percentage text-danger"><i class="fas fa-caret-down"></i> 18%</span>
-                            <h5 class="description-header">70.5%</h5>
-                            <span class="description-text">TỶ SUẤT LỢI NHUẬN</span>
-                        </div>
-                        <!-- /.description-block -->
                     </div>
                 </div>
-                <!-- /.row -->
+                <div class="card-body">
+                    <div class="chart">
+                        <canvas id="revenueChart" height="300"></canvas>
+                    </div>
+                </div>
             </div>
-            <!-- /.card-footer -->
         </div>
-        <!-- /.card -->
-    </div>
-    <!-- /.col -->
-    
-    <div class="col-md-4">
-        <!-- Sản phẩm bán chạy -->
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Sản phẩm bán chạy nhất</h3>
-                <div class="card-tools">
-                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                    <button type="button" class="btn btn-tool" data-card-widget="remove">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-            <!-- /.card-header -->
-            <div class="card-body p-0">
-                <ul class="products-list product-list-in-card pl-2 pr-2">
-                    <li class="item">
-                        <div class="product-img">
-                            <img src="<?= Yii::$app->request->baseUrl ?>/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                        </div>
-                        <div class="product-info">
-                            <a href="javascript:void(0)" class="product-title">iPhone 11 Pro
-                                <span class="badge badge-warning float-right">32 đã bán</span></a>
-                            <span class="product-description">
-                                Apple iPhone 11 Pro 256GB
-                            </span>
-                        </div>
-                    </li>
-                    <!-- /.item -->
-                    <li class="item">
-                        <div class="product-img">
-                            <img src="<?= Yii::$app->request->baseUrl ?>/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                        </div>
-                        <div class="product-info">
-                            <a href="javascript:void(0)" class="product-title">Samsung Galaxy S20
-                                <span class="badge badge-info float-right">27 đã bán</span></a>
-                            <span class="product-description">
-                                Samsung Galaxy S20 Ultra Black
-                            </span>
-                        </div>
-                    </li>
-                    <!-- /.item -->
-                    <li class="item">
-                        <div class="product-img">
-                            <img src="<?= Yii::$app->request->baseUrl ?>/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                        </div>
-                        <div class="product-info">
-                            <a href="javascript:void(0)" class="product-title">
-                                Laptop Dell XPS 13
-                                <span class="badge badge-danger float-right">21 đã bán</span>
-                            </a>
-                            <span class="product-description">
-                                Dell XPS 13 9380 i7 16GB RAM
-                            </span>
-                        </div>
-                    </li>
-                    <!-- /.item -->
-                    <li class="item">
-                        <div class="product-img">
-                            <img src="<?= Yii::$app->request->baseUrl ?>/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                        </div>
-                        <div class="product-info">
-                            <a href="javascript:void(0)" class="product-title">Tai nghe AirPods Pro
-                                <span class="badge badge-success float-right">18 đã bán</span></a>
-                            <span class="product-description">
-                                Apple AirPods Pro with Wireless Charging Case
-                            </span>
-                        </div>
-                    </li>
-                    <!-- /.item -->
-                    <li class="item">
-                        <div class="product-img">
-                            <img src="<?= Yii::$app->request->baseUrl ?>/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                        </div>
-                        <div class="product-info">
-                            <a href="javascript:void(0)" class="product-title">iPad Pro 11
-                                <span class="badge badge-primary float-right">15 đã bán</span></a>
-                            <span class="product-description">
-                                Apple iPad Pro 11-inch 256GB Wi-Fi
-                            </span>
-                        </div>
-                    </li>
-                    <!-- /.item -->
-                </ul>
-            </div>
-            <!-- /.card-body -->
-            <div class="card-footer text-center">
-                <a href="<?= \yii\helpers\Url::to(['/report/sales']) ?>" class="uppercase">Xem tất cả sản phẩm</a>
-            </div>
-            <!-- /.card-footer -->
-        </div>
-        <!-- /.card -->
         
-        <!-- Đơn hàng gần đây -->
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Đơn hàng gần đây</h3>
-                <div class="card-tools">
-                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                    <button type="button" class="btn btn-tool" data-card-widget="remove">
-                        <i class="fas fa-times"></i>
-                    </button>
+        <!-- Top sản phẩm bán chạy -->
+        <div class="col-lg-4">
+            <div class="card rounded-lg shadow-sm">
+                <div class="card-header border-0 bg-transparent">
+                    <h3 class="card-title text-bold">Top sản phẩm bán chạy</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="products-list product-list-in-card pl-2 pr-2">
+                        <?php foreach ($topProducts as $product): ?>
+                        <li class="item">
+                            <div class="product-img">
+                                <?php $productImage = \common\models\ProductImage::findOne(['product_id' => $product['id'], 'is_main' => 1]); ?>
+                                <img src="<?= $productImage ? Yii::$app->request->baseUrl . '/uploads/products/' . $productImage->image : Yii::$app->request->baseUrl . '/img/products/default.jpg' ?>" alt="Product Image" class="img-size-50">
+                            </div>
+                            <div class="product-info">
+                                <a href="<?= \yii\helpers\Url::to(['/product/view', 'id' => $product['id']]) ?>" class="product-title">
+                                    <?= $product['name'] ?>
+                                    <span class="badge badge-success float-right"><?= $product['total_quantity'] ?> sản phẩm</span>
+                                </a>
+                                <span class="product-description">
+                                    <?= $product['code'] ?>
+                                </span>
+                            </div>
+                        </li>
+                        <?php endforeach; ?>
+                        
+                        <?php if (empty($topProducts)): ?>
+                        <li class="item">
+                            <div class="text-center py-3">
+                                <i class="fas fa-info-circle text-muted"></i> Chưa có dữ liệu sản phẩm bán chạy
+                            </div>
+                        </li>
+                        <?php endif; ?>
+                    </ul>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="<?= \yii\helpers\Url::to(['/report/products']) ?>" class="uppercase">Xem tất cả sản phẩm</a>
                 </div>
             </div>
-            <!-- /.card-header -->
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table m-0">
-                        <thead>
-                            <tr>
-                                <th>Mã đơn</th>
-                                <th>Khách hàng</th>
-                                <th>Trạng thái</th>
-                                <th>Thanh toán</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><a href="#">ORD0001</a></td>
-                                <td>Nguyễn Văn A</td>
-                                <td><span class="badge badge-success">Hoàn thành</span></td>
-                                <td>
-                                    <div class="sparkbar" data-color="#00a65a" data-height="20">2,500,000 đ</div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><a href="#">ORD0002</a></td>
-                                <td>Trần Thị B</td>
-                                <td><span class="badge badge-warning">Đang xử lý</span></td>
-                                <td>
-                                    <div class="sparkbar" data-color="#f39c12" data-height="20">1,800,000 đ</div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><a href="#">ORD0003</a></td>
-                                <td>Lê Văn C</td>
-                                <td><span class="badge badge-primary">Đã thanh toán</span></td>
-                                <td>
-                                    <div class="sparkbar" data-color="#f56954" data-height="20">3,200,000 đ</div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><a href="#">ORD0004</a></td>
-                                <td>Hoàng Thị D</td>
-                                <td><span class="badge badge-info">Đang giao</span></td>
-                                <td>
-                                    <div class="sparkbar" data-color="#00c0ef" data-height="20">2,100,000 đ</div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><a href="#">ORD0005</a></td>
-                                <td>Phạm Văn E</td>
-                                <td><span class="badge badge-danger">Hủy</span></td>
-                                <td>
-                                    <div class="sparkbar" data-color="#f56954" data-height="20">0 đ</div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <!-- /.table-responsive -->
-            </div>
-            <!-- /.card-body -->
-            <div class="card-footer clearfix">
-                <a href="<?= \yii\helpers\Url::to(['/order/create']) ?>" class="btn btn-sm btn-info float-left">Tạo đơn hàng mới</a>
-                <a href="<?= \yii\helpers\Url::to(['/order']) ?>" class="btn btn-sm btn-secondary float-right">Xem tất cả đơn hàng</a>
-            </div>
-            <!-- /.card-footer -->
         </div>
-        <!-- /.card -->
     </div>
-    <!-- /.col -->
-</div>
-<!-- /.row -->
-
-<div class="row">
-    <!-- Sản phẩm sắp hết hàng -->
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Sản phẩm sắp hết hàng</h3>
-                <div class="card-tools">
-                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                    <button type="button" class="btn btn-tool" data-card-widget="remove">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-            <!-- /.card-header -->
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Mã SP</th>
-                                <th>Tên sản phẩm</th>
-                                <th>Kho</th>
-                                <th>Tồn kho</th>
-                                <th>Tồn tối thiểu</th>
-                                <th>Trạng thái</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>SP001</td>
-                                <td>iPhone 11 Pro 256GB</td>
-                                <td>Kho chính</td>
-                                <td>2</td>
-                                <td>5</td>
-                                <td><span class="badge bg-danger">Sắp hết</span></td>
-                            </tr>
-                            <tr>
-                                <td>SP002</td>
-                                <td>Samsung Galaxy S20 Ultra</td>
-                                <td>Kho chính</td>
-                                <td>3</td>
-                                <td>5</td>
-                                <td><span class="badge bg-warning">Sắp hết</span></td>
-                            </tr>
-                            <tr>
-                                <td>SP003</td>
-                                <td>Laptop Dell XPS 15</td>
-                                <td>Kho phụ</td>
-                                <td>1</td>
-                                <td>3</td>
-                                <td><span class="badge bg-danger">Sắp hết</span></td>
-                            </tr>
-                            <tr>
-                                <td>SP004</td>
-                                <td>Sạc dự phòng Anker</td>
-                                <td>Kho chính</td>
-                                <td>4</td>
-                                <td>10</td>
-                                <td><span class="badge bg-warning">Sắp hết</span></td>
-                            </tr>
-                            <tr>
-                                <td>SP005</td>
-                                <td>Tai nghe Sony WH-1000XM4</td>
-                                <td>Kho phụ</td>
-                                <td>2</td>
-                                <td>5</td>
-                                <td><span class="badge bg-warning">Sắp hết</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <!-- /.table-responsive -->
-            </div>
-            <!-- /.card-body -->
-            <div class="card-footer clearfix">
-                <a href="<?= \yii\helpers\Url::to(['/stock-in/create']) ?>" class="btn btn-sm btn-info float-left">Tạo phiếu nhập kho</a>
-                <a href="<?= \yii\helpers\Url::to(['/report/inventory']) ?>" class="btn btn-sm btn-secondary float-right">Xem báo cáo tồn kho</a>
-            </div>
-            <!-- /.card-footer -->
-        </div>
-        <!-- /.card -->
-    </div>
-    <!-- /.col -->
     
-    <!-- Phiếu bảo hành mới -->
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Phiếu bảo hành mới</h3>
-                <div class="card-tools">
-                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                    <button type="button" class="btn btn-tool" data-card-widget="remove">
-                        <i class="fas fa-times"></i>
-                    </button>
+    <!-- Hàng thứ 2 của dashboard -->
+    <div class="row">
+        <!-- Đơn hàng gần đây -->
+        <div class="col-lg-8">
+            <div class="card rounded-lg shadow-sm">
+                <div class="card-header border-0 bg-transparent">
+                    <h3 class="card-title text-bold">Đơn hàng gần đây</h3>
+                    <div class="card-tools">
+                        <a href="<?= \yii\helpers\Url::to(['/order']) ?>" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye mr-1"></i> Xem tất cả
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Mã đơn</th>
+                                    <th>Khách hàng</th>
+                                    <th>Trạng thái</th>
+                                    <th>Tổng tiền</th>
+                                    <th>Thanh toán</th>
+                                    <th>Thời gian</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($recentOrders as $order): ?>
+                                <tr>
+                                    <td>
+                                        <a href="<?= \yii\helpers\Url::to(['/order/view', 'id' => $order->id]) ?>">
+                                            <?= $order->code ?>
+                                        </a>
+                                    </td>
+                                    <td><?= $order->customer ? $order->customer->name : 'Khách lẻ' ?></td>
+                                    <td>
+                                        <?php
+                                        switch ($order->status) {
+                                            case 0:
+                                                echo '<span class="badge badge-secondary">Nháp</span>';
+                                                break;
+                                            case 1:
+                                                echo '<span class="badge badge-info">Xác nhận</span>';
+                                                break;
+                                            case 2:
+                                                echo '<span class="badge badge-primary">Đã thanh toán</span>';
+                                                break;
+                                            case 3:
+                                                echo '<span class="badge badge-warning">Đang giao</span>';
+                                                break;
+                                            case 4:
+                                                echo '<span class="badge badge-success">Hoàn thành</span>';
+                                                break;
+                                            case 5:
+                                                echo '<span class="badge badge-danger">Đã hủy</span>';
+                                                break;
+                                        }
+                                        ?>
+                                    </td>
+                                    <td><?= $formatter->asCurrency($order->total_amount) ?></td>
+                                    <td>
+                                        <?php
+                                        switch ($order->payment_status) {
+                                            case 0:
+                                                echo '<span class="badge badge-danger">Chưa thanh toán</span>';
+                                                break;
+                                            case 1:
+                                                echo '<span class="badge badge-warning">Thanh toán một phần</span>';
+                                                break;
+                                            case 2:
+                                                echo '<span class="badge badge-success">Đã thanh toán</span>';
+                                                break;
+                                        }
+                                        ?>
+                                    </td>
+                                    <td><?= Yii::$app->formatter->asRelativeTime($order->order_date) ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                                
+                                <?php if (empty($recentOrders)): ?>
+                                <tr>
+                                    <td colspan="6" class="text-center py-3">
+                                        <i class="fas fa-info-circle text-muted"></i> Chưa có đơn hàng nào
+                                    </td>
+                                </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-            <!-- /.card-header -->
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Mã BH</th>
-                                <th>Khách hàng</th>
-                                <th>Sản phẩm</th>
-                                <th>Ngày nhận</th>
-                                <th>Trạng thái</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><a href="#">BH0001</a></td>
-                                <td>Nguyễn Văn A</td>
-                                <td>iPhone 11 Pro</td>
-                                <td>18/05/2025</td>
-                                <td><span class="badge bg-warning">Chờ xử lý</span></td>
-                            </tr>
-                            <tr>
-                                <td><a href="#">BH0002</a></td>
-                                <td>Trần Thị B</td>
-                                <td>Laptop Dell XPS 13</td>
-                                <td>17/05/2025</td>
-                                <td><span class="badge bg-primary">Đang xử lý</span></td>
-                            </tr>
-                            <tr>
-                                <td><a href="#">BH0003</a></td>
-                                <td>Lê Văn C</td>
-                                <td>Samsung Galaxy S20</td>
-                                <td>16/05/2025</td>
-                                <td><span class="badge bg-warning">Chờ xử lý</span></td>
-                            </tr>
-                            <tr>
-                                <td><a href="#">BH0004</a></td>
-                                <td>Hoàng Thị D</td>
-                                <td>Tai nghe AirPods Pro</td>
-                                <td>15/05/2025</td>
-                                <td><span class="badge bg-success">Hoàn thành</span></td>
-                            </tr>
-                            <tr>
-                                <td><a href="#">BH0005</a></td>
-                                <td>Phạm Văn E</td>
-                                <td>iPad Pro 11</td>
-                                <td>14/05/2025</td>
-                                <td><span class="badge bg-danger">Từ chối</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <!-- /.table-responsive -->
-            </div>
-            <!-- /.card-body -->
-            <div class="card-footer clearfix">
-                <a href="<?= \yii\helpers\Url::to(['/warranty/create']) ?>" class="btn btn-sm btn-info float-left">Tạo phiếu bảo hành</a>
-                <a href="<?= \yii\helpers\Url::to(['/warranty']) ?>" class="btn btn-sm btn-secondary float-right">Xem tất cả phiếu bảo hành</a>
-            </div>
-            <!-- /.card-footer -->
         </div>
-        <!-- /.card -->
+        
+        <!-- Sản phẩm sắp hết hàng -->
+        <div class="col-lg-4">
+            <div class="card rounded-lg shadow-sm">
+                <div class="card-header border-0 bg-transparent">
+                    <h3 class="card-title text-bold">
+                        <i class="fas fa-exclamation-triangle text-warning mr-1"></i> 
+                        Sản phẩm sắp hết hàng
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="products-list product-list-in-card pl-2 pr-2">
+                        <?php foreach ($lowStockProductsList as $stockItem): ?>
+                        <li class="item">
+                            <div class="product-img">
+                                <?php $productImage = \common\models\ProductImage::findOne(['product_id' => $stockItem->product_id, 'is_main' => 1]); ?>
+                                <img src="<?= $productImage ? Yii::$app->request->baseUrl . '/uploads/products/' . $productImage->image : Yii::$app->request->baseUrl . '/img/products/default.jpg' ?>" alt="Product Image" class="img-size-50">
+                            </div>
+                            <div class="product-info">
+                                <a href="<?= \yii\helpers\Url::to(['/product/view', 'id' => $stockItem->product_id]) ?>" class="product-title">
+                                    <?= $stockItem->product->name ?>
+                                    <span class="badge badge-danger float-right">Còn <?= $stockItem->quantity ?></span>
+                                </a>
+                                <span class="product-description">
+                                    <?= $stockItem->warehouse->name ?>
+                                    <div class="progress progress-xs mt-1">
+                                        <?php 
+                                        $percent = min(100, $stockItem->quantity / $stockItem->product->min_stock * 100);
+                                        $bgClass = $percent < 30 ? 'bg-danger' : ($percent < 70 ? 'bg-warning' : 'bg-success');
+                                        ?>
+                                        <div class="progress-bar <?= $bgClass ?>" style="width: <?= $percent ?>%"></div>
+                                    </div>
+                                </span>
+                            </div>
+                        </li>
+                        <?php endforeach; ?>
+                        
+                        <?php if (empty($lowStockProductsList)): ?>
+                        <li class="item">
+                            <div class="text-center py-3">
+                                <i class="fas fa-check-circle text-success"></i> Không có sản phẩm nào sắp hết hàng
+                            </div>
+                        </li>
+                        <?php endif; ?>
+                    </ul>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="<?= \yii\helpers\Url::to(['/stock/low-stock']) ?>" class="uppercase">Xem tất cả sản phẩm sắp hết hàng</a>
+                </div>
+            </div>
+        </div>
     </div>
-    <!-- /.col -->
+
+    <!-- Hàng cuối cùng của dashboard -->
+    <div class="row">
+        <!-- Thống kê tài chính -->
+        <div class="col-lg-6">
+            <div class="card rounded-lg shadow-sm">
+                <div class="card-header border-0 bg-transparent">
+                    <h3 class="card-title text-bold">Tổng quan tài chính tháng này</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="chart-container">
+                                <canvas id="financeChart" height="260"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mt-4">
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span>Doanh thu</span>
+                                        <span class="text-success"><?= $formatter->asCurrency($monthlyRevenue) ?></span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-success" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span>Chi phí</span>
+                                        <span class="text-danger"><?= $formatter->asCurrency($monthlyExpenses) ?></span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <?php $expensePercent = $monthlyRevenue > 0 ? min(100, $monthlyExpenses / $monthlyRevenue * 100) : 0; ?>
+                                        <div class="progress-bar bg-danger" style="width: <?= $expensePercent ?>%"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span>Lợi nhuận</span>
+                                        <span class="text-primary"><?= $formatter->asCurrency($monthlyProfit) ?></span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <?php $profitPercent = $monthlyRevenue > 0 ? min(100, $monthlyProfit / $monthlyRevenue * 100) : 0; ?>
+                                        <div class="progress-bar bg-primary" style="width: <?= $profitPercent ?>%"></div>
+                                    </div>
+                                </div>
+                                <div class="text-center mt-4">
+                                    <div class="small text-muted">Tỷ suất lợi nhuận</div>
+                                    <div class="h3 text-bold"><?= number_format($profitMargin, 2) ?>%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-center bg-transparent">
+                    <a href="<?= \yii\helpers\Url::to(['/report/finance']) ?>" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-chart-pie mr-1"></i> Xem báo cáo tài chính chi tiết
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Phiếu bảo hành mới -->
+        <div class="col-lg-6">
+            <div class="card rounded-lg shadow-sm">
+                <div class="card-header border-0 bg-transparent">
+                    <h3 class="card-title text-bold">
+                        <i class="fas fa-tools mr-1"></i> Phiếu bảo hành mới
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Mã BH</th>
+                                    <th>Sản phẩm</th>
+                                    <th>Khách hàng</th>
+                                    <th>Trạng thái</th>
+                                    <th style="width: 110px">Ngày hết hạn</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($newWarranties as $warranty): ?>
+                                <tr>
+                                    <td><a href="<?= \yii\helpers\Url::to(['/warranty/view', 'id' => $warranty->id]) ?>"><?= $warranty->code ?></a></td>
+                                    <td><?= $warranty->product->name ?></td>
+                                    <td><?= $warranty->customer ? $warranty->customer->name : 'Khách lẻ' ?></td>
+                                    <td>
+                                        <span class="badge" style="background-color: <?= $warranty->status->color ?>">
+                                            <?= $warranty->status->name ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        $endDate = new \DateTime($warranty->end_date);
+                                        $now = new \DateTime();
+                                        $interval = $now->diff($endDate);
+                                        $color = $endDate < $now ? 'danger' : ($interval->days < 30 ? 'warning' : 'success');
+                                        ?>
+                                        <span class="text-<?= $color ?>"><?= Yii::$app->formatter->asDate($warranty->end_date) ?></span>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                                
+                                <?php if (empty($newWarranties)): ?>
+                                <tr>
+                                    <td colspan="5" class="text-center py-3">
+                                        <i class="fas fa-info-circle text-muted"></i> Không có phiếu bảo hành mới
+                                    </td>
+                                </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="<?= \yii\helpers\Url::to(['/warranty']) ?>" class="uppercase">Xem tất cả phiếu bảo hành</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-<!-- /.row -->
 
-<!-- Chart.js script -->
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    // Dữ liệu cho biểu đồ
-    var salesChartData = {
-        labels: ['1/5', '6/5', '11/5', '16/5', '21/5', '26/5', '31/5'],
-        datasets: [
-            {
-                label: 'Doanh thu',
-                backgroundColor: 'rgba(60,141,188,0.9)',
-                borderColor: 'rgba(60,141,188,0.8)',
-                pointRadius: true,
-                pointColor: '#3b8bba',
-                pointStrokeColor: 'rgba(60,141,188,1)',
-                pointHighlightFill: '#fff',
-                pointHighlightStroke: 'rgba(60,141,188,1)',
-                data: [5000000, 7500000, 6200000, 8100000, 7800000, 8900000, 9500000]
-            },
-            {
-                label: 'Lợi nhuận',
-                backgroundColor: 'rgba(210, 214, 222, 1)',
-                borderColor: 'rgba(210, 214, 222, 1)',
-                pointRadius: true,
-                pointColor: 'rgba(210, 214, 222, 1)',
-                pointStrokeColor: '#c1c7d1',
-                pointHighlightFill: '#fff',
-                pointHighlightStroke: 'rgba(220,220,220,1)',
-                data: [3500000, 5200000, 4300000, 5700000, 5400000, 6200000, 6600000]
-            }
-        ]
-    };
+<!-- Modal Khoảng thời gian -->
+<div class="modal fade" id="timeRangeModal" tabindex="-1" role="dialog" aria-labelledby="timeRangeModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="timeRangeModalLabel">Chọn khoảng thời gian</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label>Khoảng thời gian</label>
+                        <select class="form-control">
+                            <option value="today">Hôm nay</option>
+                            <option value="yesterday">Hôm qua</option>
+                            <option value="last7days">7 ngày qua</option>
+                            <option value="last30days" selected>30 ngày qua</option>
+                            <option value="thisMonth">Tháng này</option>
+                            <option value="lastMonth">Tháng trước</option>
+                            <option value="custom">Tùy chỉnh</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Từ ngày</label>
+                        <div class="input-group date" id="fromDatePicker" data-target-input="nearest">
+                            <input type="text" class="form-control datepicker" data-target="#fromDatePicker"/>
+                            <div class="input-group-append" data-target="#fromDatePicker" data-toggle="datetimepicker">
+                                <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Đến ngày</label>
+                        <div class="input-group date" id="toDatePicker" data-target-input="nearest">
+                            <input type="text" class="form-control datepicker" data-target="#toDatePicker"/>
+                            <div class="input-group-append" data-target="#toDatePicker" data-toggle="datetimepicker">
+                                <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary">Áp dụng</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-    var salesChartOptions = {
-        maintainAspectRatio: false,
+<?php
+// Dữ liệu cho biểu đồ doanh thu
+$revenueLabels = json_encode($revenueData['labels']);
+$revenueValues = json_encode($revenueData['revenue']);
+$profitValues = json_encode($revenueData['profit']);
+
+// Dữ liệu cho biểu đồ tài chính
+$financeData = [
+    'Doanh thu' => $monthlyRevenue,
+    'Chi phí' => $monthlyExpenses,
+    'Lợi nhuận' => $monthlyProfit
+];
+$financeLabels = json_encode(array_keys($financeData));
+$financeValues = json_encode(array_values($financeData));
+
+$js = <<<JS
+// Khai báo biến toàn cục
+var BASE_URL = '/';
+var SHOW_NOTIFICATION = false;
+
+// Biểu đồ doanh thu
+var revenueCtx = document.getElementById('revenueChart').getContext('2d');
+var revenueChart = new Chart(revenueCtx, {
+    type: 'line',
+    data: {
+        labels: $revenueLabels,
+        datasets: [{
+            label: 'Doanh thu',
+            data: $revenueValues,
+            backgroundColor: 'rgba(60, 141, 188, 0.2)',
+            borderColor: 'rgba(60, 141, 188, 1)',
+            borderWidth: 2,
+            pointRadius: 2,
+            pointBackgroundColor: 'rgba(60, 141, 188, 1)',
+            pointBorderColor: '#fff',
+            pointHoverRadius: 5,
+            tension: 0.4
+        }, {
+            label: 'Lợi nhuận',
+            data: $profitValues,
+            backgroundColor: 'rgba(40, 167, 69, 0.2)',
+            borderColor: 'rgba(40, 167, 69, 1)',
+            borderWidth: 2,
+            pointRadius: 2,
+            pointBackgroundColor: 'rgba(40, 167, 69, 1)',
+            pointBorderColor: '#fff',
+            pointHoverRadius: 5,
+            tension: 0.4
+        }]
+    },
+    options: {
         responsive: true,
-        legend: {
-            display: true
-        },
+        maintainAspectRatio: false,
         scales: {
-            xAxes: [{
-                gridLines: {
-                    display: false
-                }
-            }],
-            yAxes: [{
-                gridLines: {
-                    display: false
+            y: {
+                beginAtZero: false,
+                grid: {
+                    drawBorder: false
                 },
                 ticks: {
                     callback: function(value) {
-                        return value / 1000000 + ' triệu';
+                        return value.toLocaleString('vi-VN') + ' đ';
                     }
                 }
-            }]
+            },
+            x: {
+                grid: {
+                    display: false
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.dataset.label + ': ' + context.parsed.y.toLocaleString('vi-VN') + ' đ';
+                    }
+                }
+            }
         }
-    };
-
-    // Lấy canvas biểu đồ doanh thu
-    var salesChartCanvas = document.getElementById('salesChart').getContext('2d');
-    var salesChart = new Chart(salesChartCanvas, {
-        type: 'line',
-        data: salesChartData,
-        options: salesChartOptions
-    });
+    }
 });
-</script>
+
+// Biểu đồ tài chính
+var financeCtx = document.getElementById('financeChart').getContext('2d');
+var financeChart = new Chart(financeCtx, {
+    type: 'doughnut',
+    data: {
+        labels: $financeLabels,
+        datasets: [{
+            data: $financeValues,
+            backgroundColor: [
+                'rgba(40, 167, 69, 0.8)',
+                'rgba(220, 53, 69, 0.8)',
+                'rgba(0, 123, 255, 0.8)'
+            ],
+            borderColor: [
+                'rgba(40, 167, 69, 1)',
+                'rgba(220, 53, 69, 1)',
+                'rgba(0, 123, 255, 1)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'bottom'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        var value = context.raw;
+                        value = value.toLocaleString('vi-VN') + ' đ';
+                        return context.label + ': ' + value;
+                    }
+                }
+            }
+        }
+    }
+});
+JS;
+$this->registerJs($js);
+?>

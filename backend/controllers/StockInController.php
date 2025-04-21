@@ -13,7 +13,8 @@ use backend\services\StockInService;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
+use common\components\AccessControl; // Thay thế AccessControl của Yii2
+use common\components\WarehouseFilter; // Thêm WarehouseFilter để kiểm soát quyền kho
 use yii\helpers\Json;
 
 class StockInController extends Controller
@@ -30,16 +31,33 @@ class StockInController extends Controller
     {
         return [
             'access' => [
-                'class' => AccessControl::class,
+                'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'allow' => true,
-                        'roles' => ['manageProducts'],
+                        'actions' => ['index', 'view', 'get-product', 'print'],
+                        'permissions' => ['viewInventory', 'createStockIn'],
+                    ],
+                    [
+                        'actions' => ['create', 'update'],
+                        'permissions' => 'createStockIn',
+                    ],
+                    [
+                        'actions' => ['approve', 'complete'],
+                        'permissions' => 'approveStockIn',
+                    ],
+                    [
+                        'actions' => ['cancel'],
+                        'permissions' => ['approveStockIn', 'admin'],
                     ],
                 ],
             ],
+            'warehouseFilter' => [
+                'class' => WarehouseFilter::className(),
+                'only' => ['view', 'update', 'approve', 'complete', 'cancel'],
+                'except' => ['index', 'create', 'get-product'],
+            ],
             'verbs' => [
-                'class' => VerbFilter::class,
+                'class' => VerbFilter::className(),
                 'actions' => [
                     'delete' => ['POST'],
                     'approve' => ['POST'],
@@ -53,6 +71,16 @@ class StockInController extends Controller
     {
         $searchModel = new StockInSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        
+        // Nếu không phải admin hoặc quản lý cửa hàng, chỉ xem được kho được phân quyền
+        if (!Yii::$app->user->can('admin') && !Yii::$app->user->can('storeManager')) {
+            $userWarehouses = \common\models\UserWarehouse::find()
+                ->select('warehouse_id')
+                ->where(['user_id' => Yii::$app->user->id])
+                ->column();
+            
+            $dataProvider->query->andWhere(['warehouse_id' => $userWarehouses]);
+        }
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -79,6 +107,25 @@ class StockInController extends Controller
         $model->created_at = date('Y-m-d H:i:s');
         $model->updated_at = date('Y-m-d H:i:s');
         $model->created_by = Yii::$app->user->id;
+        
+        // Lấy danh sách kho được phân quyền
+        $warehouses = [];
+        if (Yii::$app->user->can('admin') || Yii::$app->user->can('storeManager')) {
+            $warehouses = Warehouse::getList();
+        } else {
+            $userWarehouses = \common\models\UserWarehouse::find()
+                ->select('warehouse_id')
+                ->where(['user_id' => Yii::$app->user->id])
+                ->column();
+            
+            if (!empty($userWarehouses)) {
+                $warehouses = Warehouse::find()
+                    ->where(['id' => $userWarehouses, 'is_active' => 1])
+                    ->indexBy('id')
+                    ->select(['name'])
+                    ->column();
+            }
+        }
 
         if ($model->load(Yii::$app->request->post())) {
             $transaction = Yii::$app->db->beginTransaction();
@@ -100,7 +147,7 @@ class StockInController extends Controller
 
         return $this->render('create', [
             'model' => $model,
-            'warehouses' => Warehouse::getList(),
+            'warehouses' => $warehouses,
             'suppliers' => Supplier::getList(),
             'products' => Product::getList(),
             'units' => ProductUnit::getList(),

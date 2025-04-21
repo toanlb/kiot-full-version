@@ -1,124 +1,160 @@
-/**
- * Dashboard.js
- * Script cho trang dashboard
- */
-
 $(function () {
     'use strict'
-
-    // Bootstrap tooltips
-    $('[data-toggle="tooltip"]').tooltip()
-
-    // Initialize Card Widget
-    $('.card-collapse').on('click', function(e) {
-        e.preventDefault()
-        $(this).closest('.card').find('.card-body, .card-footer').slideToggle()
-        $(this).find('i').toggleClass('fa-minus fa-plus')
-    })
-
-    // Toggle sidebar
-    $('[data-widget="pushmenu"]').on('click', function () {
-        $('body').toggleClass('sidebar-collapse')
-    })
-
-    // Đếm ngược cho phiếu bảo hành
-    function countdownWarranty() {
-        $('.warranty-countdown').each(function() {
-            var endDate = new Date($(this).data('end-date'))
-            var now = new Date()
-            var diff = Math.floor((endDate - now) / (1000 * 60 * 60 * 24))
-            
-            if (diff <= 0) {
-                $(this).html('<span class="badge bg-danger">Hết hạn</span>')
-            } else if (diff <= 30) {
-                $(this).html('<span class="badge bg-warning">' + diff + ' ngày</span>')
-            } else {
-                $(this).html('<span class="badge bg-success">' + diff + ' ngày</span>')
-            }
-        })
-    }
     
-    // Cập nhật số liệu realtime
-    function updateDashboardStats() {
-        // Đây là nơi để gọi Ajax lấy dữ liệu dashboard thời gian thực
-        // Ví dụ:
-        /*
+    // Làm mới dữ liệu dashboard định kỳ
+    var refreshInterval = 300000; // 5 phút
+    
+    function refreshDashboardData() {
         $.ajax({
-            url: 'path/to/dashboard-stats',
+            url: BASE_URL + '/site/dashboard-data',
             type: 'GET',
             dataType: 'json',
             success: function(data) {
-                $('#today-orders').text(data.todayOrders);
+                // Cập nhật các thẻ dữ liệu
+                $('#today-orders-count').text(formatNumber(data.todayOrders));
                 $('#today-revenue').text(formatCurrency(data.todayRevenue));
-                $('#new-customers').text(data.newCustomers);
-                $('#low-stock').text(data.lowStock);
+                $('#new-customers-count').text(formatNumber(data.newCustomers));
+                $('#low-stock-count').text(formatNumber(data.lowStockProducts));
+                
+                // Hiển thị thời gian cập nhật
+                var serverTime = new Date(data.serverTime);
+                $('#last-update-time').text(formatDateTime(serverTime));
             },
-            error: function(xhr, status, error) {
-                console.error("Couldn't load dashboard stats:", error);
+            error: function() {
+                console.log('Không thể cập nhật dữ liệu dashboard');
             }
         });
-        */
     }
     
-    // Format currency
-    function formatCurrency(value) {
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
-    }
-
-    // Khởi động các function
-    countdownWarranty();
-    updateDashboardStats();
+    // Khởi tạo hàm làm mới tự động
+    setInterval(refreshDashboardData, refreshInterval);
     
-    // Cập nhật dữ liệu theo khoảng thời gian
-    setInterval(countdownWarranty, 60000); // 1 phút cập nhật một lần
-    setInterval(updateDashboardStats, 300000); // 5 phút cập nhật một lần
-
-    // Bắt sự kiện khi thay đổi bộ lọc dashboard
-    $('#dashboard-filters').on('change', function() {
-        // Thực hiện lọc dữ liệu
-        var filter = $(this).val();
-        // Gọi AJAX để lấy dữ liệu mới theo bộ lọc
+    // Khởi tạo các datepicker
+    $('.datepicker').datepicker({
+        format: 'dd/mm/yyyy',
+        autoclose: true,
+        todayHighlight: true,
+        language: 'vi'
     });
-
-    // Bắt sự kiện khi người dùng click vào thông báo
-    $('.navbar-nav .dropdown-menu a').on('click', function(e) {
-        // Xử lý sự kiện khi click vào thông báo
-        var notificationId = $(this).data('notification-id');
-        if (notificationId) {
-            // Đánh dấu thông báo là đã đọc
-            markNotificationAsRead(notificationId);
+    
+    // Khởi tạo Select2 cho các dropdown
+    $('.select2').select2({
+        theme: 'bootstrap4'
+    });
+    
+    // Định dạng số
+    function formatNumber(number) {
+        return new Intl.NumberFormat('vi-VN').format(number);
+    }
+    
+    // Định dạng tiền tệ
+    function formatCurrency(number) {
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(number);
+    }
+    
+    // Định dạng ngày giờ
+    function formatDateTime(date) {
+        return new Intl.DateTimeFormat('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        }).format(date);
+    }
+    
+    // Xử lý nút làm mới dữ liệu
+    $('#refresh-dashboard').on('click', function() {
+        $(this).find('i').addClass('fa-spin');
+        refreshDashboardData();
+        setTimeout(function() {
+            $('#refresh-dashboard').find('i').removeClass('fa-spin');
+        }, 1000);
+    });
+    
+    // Xử lý chuyển đổi biểu đồ
+    $('.chart-type-switch').on('click', function(e) {
+        e.preventDefault();
+        var target = $(this).data('target');
+        var type = $(this).data('type');
+        
+        switch(target) {
+            case 'revenue':
+                // Chuyển đổi kiểu biểu đồ doanh thu
+                if (revenueChart.config.type !== type) {
+                    revenueChart.config.type = type;
+                    revenueChart.update();
+                }
+                break;
+                
+            case 'warehouse':
+                // Chuyển đổi kiểu biểu đồ kho hàng
+                if (warehouseChart.config.type !== type) {
+                    warehouseChart.config.type = type;
+                    warehouseChart.update();
+                }
+                break;
         }
+        
+        // Cập nhật trạng thái active cho nút
+        $(this).siblings().removeClass('active');
+        $(this).addClass('active');
     });
-
-    function markNotificationAsRead(id) {
-        // Gọi API để đánh dấu là đã đọc
-        /*
+    
+    // Xử lý thay đổi thời gian cho biểu đồ
+    $('.time-range-selector').on('click', function(e) {
+        e.preventDefault();
+        var range = $(this).data('range');
+        var chart = $(this).data('chart');
+        
+        // Cập nhật UI
+        $(this).siblings().removeClass('active');
+        $(this).addClass('active');
+        
+        // Thực hiện AJAX để lấy dữ liệu mới theo khoảng thời gian
         $.ajax({
-            url: 'path/to/mark-notification',
-            type: 'POST',
-            data: { id: id },
-            success: function(response) {
-                // Thực hiện các thao tác UI sau khi đánh dấu thành công
+            url: BASE_URL + '/site/chart-data',
+            type: 'GET',
+            data: {
+                chart: chart,
+                range: range
+            },
+            dataType: 'json',
+            success: function(data) {
+                // Cập nhật dữ liệu biểu đồ tương ứng
+                switch(chart) {
+                    case 'revenue':
+                        revenueChart.data.labels = data.labels;
+                        revenueChart.data.datasets[0].data = data.values;
+                        revenueChart.update();
+                        break;
+                    case 'products':
+                        // Cập nhật biểu đồ sản phẩm
+                        break;
+                }
             }
         });
-        */
-    }
-
-    // Hiển thị thời gian thực
-    function updateClock() {
-        var now = new Date();
-        var hours = now.getHours();
-        var minutes = now.getMinutes();
-        
-        // Thêm số 0 ở đầu nếu cần thiết
-        hours = hours < 10 ? '0' + hours : hours;
-        minutes = minutes < 10 ? '0' + minutes : minutes;
-        
-        // Hiển thị giờ
-        $('#live-clock').text(hours + ':' + minutes);
+    });
+    
+    // Xử lý hiển thị trợ giúp
+    $('.help-tooltip').tooltip();
+    
+    // Tối ưu giao diện cho màn hình nhỏ
+    function optimizeForMobile() {
+        if (window.innerWidth < 768) {
+            $('.card').addClass('collapsed-card');
+        } else {
+            $('.card').removeClass('collapsed-card');
+        }
     }
     
-    // Cập nhật đồng hồ mỗi giây
-    setInterval(updateClock, 1000);
-    updateClock(); // Khởi tạo
+    // Gọi khi tải trang và thay đổi kích thước
+    optimizeForMobile();
+    $(window).resize(optimizeForMobile);
+    
+    // Hiện modal nếu cần thông báo
+    if (SHOW_NOTIFICATION) {
+        $('#notificationModal').modal('show');
+    }
 });

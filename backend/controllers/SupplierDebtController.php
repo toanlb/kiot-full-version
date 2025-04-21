@@ -11,7 +11,7 @@ use common\models\CashBook;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
+use common\components\AccessControl; 
 use yii\helpers\ArrayHelper;
 use yii\db\Expression;
 use yii\db\Transaction;

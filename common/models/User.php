@@ -297,6 +297,28 @@ class User extends ActiveRecord implements IdentityInterface
     }
 
     /**
+     * Kiểm tra người dùng có vai trò cụ thể không
+     * @param string $roleName Tên vai trò cần kiểm tra
+     * @return boolean
+     */
+    public function hasRole($roleName)
+    {
+        $auth = Yii::$app->authManager;
+        $roles = $auth->getRolesByUser($this->id);
+        return isset($roles[$roleName]);
+    }
+
+    /**
+     * Kiểm tra người dùng có quyền cụ thể không
+     * @param string $permissionName Tên quyền cần kiểm tra
+     * @return boolean
+     */
+    public function hasPermission($permissionName)
+    {
+        return Yii::$app->authManager->checkAccess($this->id, $permissionName);
+    }
+
+    /**
      * Removes password reset token
      */
     public function removePasswordResetToken()

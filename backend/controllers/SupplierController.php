@@ -1,4 +1,5 @@
 <?php
+
 namespace backend\controllers;
 
 use Yii;
@@ -10,7 +11,7 @@ use common\models\StockIn;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
+use common\components\AccessControl;
 use yii\web\UploadedFile;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Json;
@@ -60,7 +61,6 @@ class SupplierController extends Controller
             'dataProvider' => $dataProvider,
         ]);
     }
-
     /**
      * Displays a single Supplier model.
      * @param integer $id
@@ -70,21 +70,21 @@ class SupplierController extends Controller
     public function actionView($id)
     {
         $model = $this->findModel($id);
-        
+
         // Lấy danh sách sản phẩm của nhà cung cấp
         $supplierProducts = SupplierProduct::find()
             ->where(['supplier_id' => $id])
             ->orderBy(['is_primary_supplier' => SORT_DESC, 'product_id' => SORT_ASC])
             ->with('product')
             ->all();
-            
+
         // Lấy lịch sử nhập hàng
         $stockInHistory = StockIn::find()
             ->where(['supplier_id' => $id])
             ->orderBy(['stock_in_date' => SORT_DESC])
             ->limit(10)
             ->all();
-            
+
         // Lấy công nợ gần đây
         $debtHistory = SupplierDebt::find()
             ->where(['supplier_id' => $id])
@@ -168,13 +168,13 @@ class SupplierController extends Controller
         // Kiểm tra xem nhà cung cấp có phiếu nhập kho hoặc công nợ không
         $hasStockIn = StockIn::find()->where(['supplier_id' => $id])->exists();
         $hasDebt = SupplierDebt::find()->where(['supplier_id' => $id])->exists();
-        
+
         if ($hasStockIn || $hasDebt) {
             Yii::$app->session->setFlash('error', 'Không thể xóa nhà cung cấp này vì đã có phiếu nhập kho hoặc công nợ liên quan!');
         } else {
             // Xóa tất cả sản phẩm liên quan đến nhà cung cấp
             SupplierProduct::deleteAll(['supplier_id' => $id]);
-            
+
             // Xóa nhà cung cấp
             $this->findModel($id)->delete();
             Yii::$app->session->setFlash('success', 'Đã xóa nhà cung cấp thành công!');
@@ -182,7 +182,7 @@ class SupplierController extends Controller
 
         return $this->redirect(['index']);
     }
-    
+
     /**
      * Quản lý sản phẩm của nhà cung cấp
      */
@@ -193,40 +193,40 @@ class SupplierController extends Controller
         $model->supplier_id = $id;
         $model->created_at = date('Y-m-d H:i:s');
         $model->updated_at = date('Y-m-d H:i:s');
-        
+
         // Lấy danh sách sản phẩm của nhà cung cấp
         $supplierProducts = SupplierProduct::find()
             ->where(['supplier_id' => $id])
             ->orderBy(['is_primary_supplier' => SORT_DESC, 'product_id' => SORT_ASC])
             ->with('product')
             ->all();
-            
+
         return $this->render('product', [
             'supplier' => $supplier,
             'model' => $model,
             'supplierProducts' => $supplierProducts,
         ]);
     }
-    
+
     /**
      * Thêm sản phẩm cho nhà cung cấp
      */
     public function actionAddProduct()
     {
         $model = new SupplierProduct();
-        
+
         if ($model->load(Yii::$app->request->post())) {
             // Kiểm tra xem sản phẩm đã tồn tại cho nhà cung cấp này chưa
             $exists = SupplierProduct::find()
                 ->where(['supplier_id' => $model->supplier_id, 'product_id' => $model->product_id])
                 ->exists();
-                
+
             if ($exists) {
                 Yii::$app->session->setFlash('error', 'Sản phẩm này đã được thêm cho nhà cung cấp!');
             } else {
                 $model->created_at = date('Y-m-d H:i:s');
                 $model->updated_at = date('Y-m-d H:i:s');
-                
+
                 if ($model->save()) {
                     Yii::$app->session->setFlash('success', 'Đã thêm sản phẩm cho nhà cung cấp thành công!');
                 } else {
@@ -234,45 +234,46 @@ class SupplierController extends Controller
                 }
             }
         }
-        
+
         return $this->redirect(['product', 'id' => $model->supplier_id]);
     }
-    
+
     /**
      * Xóa sản phẩm khỏi nhà cung cấp
      */
     public function actionRemoveProduct($id)
     {
         $model = SupplierProduct::findOne($id);
-        
+
         if (!$model) {
             throw new NotFoundHttpException('Không tìm thấy sản phẩm.');
         }
-        
+
         $supplierId = $model->supplier_id;
         $model->delete();
-        
+
         Yii::$app->session->setFlash('success', 'Đã xóa sản phẩm khỏi nhà cung cấp thành công!');
         return $this->redirect(['product', 'id' => $supplierId]);
     }
-    
+
     /**
      * Lấy danh sách nhà cung cấp dạng JSON cho dropdown/autocomplete
      */
     public function actionGetList($q = null)
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        
+
         $query = Supplier::find()
             ->where(['status' => 1])
-            ->andFilterWhere(['or', 
+            ->andFilterWhere([
+                'or',
                 ['like', 'name', $q],
                 ['like', 'code', $q],
                 ['like', 'phone', $q],
             ]);
-            
+
         $suppliers = $query->limit(20)->all();
-        
+
         $results = [];
         foreach ($suppliers as $supplier) {
             $results[] = [
@@ -281,7 +282,7 @@ class SupplierController extends Controller
                 'debt_amount' => $supplier->debt_amount,
             ];
         }
-        
+
         return $results;
     }
 

@@ -10,7 +10,7 @@ use backend\services\StockService;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
+use common\components\AccessControl; 
 
 class StockController extends Controller
 {

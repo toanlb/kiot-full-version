@@ -1,10 +1,8 @@
-<!-- View _search.php -->
 <?php
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
-use kartik\date\DatePicker;
+use yii\jui\DatePicker;
 use yii\helpers\ArrayHelper;
 use common\models\Province;
 
@@ -42,13 +40,13 @@ use common\models\Province;
             ]) ?>
         </div>
         <div class="col-md-3">
-            <?= $form->field($model, 'province_id')->widget(Select2::classname(), [
-                'data' => ArrayHelper::map(Province::find()->all(), 'id', 'name'),
-                'options' => ['placeholder' => 'Chọn tỉnh/thành'],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]) ?>
+            <?= $form->field($model, 'province_id')->dropDownList(
+                ArrayHelper::map(Province::find()->all(), 'id', 'name'),
+                [
+                    'prompt' => 'Chọn tỉnh/thành',
+                    'class' => 'form-control'
+                ]
+            ) ?>
         </div>
     </div>
     
@@ -68,21 +66,33 @@ use common\models\Province;
             <label>Ngày tạo</label>
             <div class="row">
                 <div class="col-md-6">
-                    <?= $form->field($model, 'created_date_from')->widget(DatePicker::classname(), [
-                        'options' => ['placeholder' => 'Từ ngày'],
-                        'pluginOptions' => [
-                            'autoclose' => true,
-                            'format' => 'yyyy-mm-dd'
-                        ]
+                    <?= $form->field($model, 'created_date_from')->widget(DatePicker::className(), [
+                        'language' => 'vi',
+                        'dateFormat' => 'yyyy-MM-dd',
+                        'options' => [
+                            'class' => 'form-control',
+                            'placeholder' => 'Từ ngày'
+                        ],
+                        'clientOptions' => [
+                            'changeMonth' => true,
+                            'changeYear' => true,
+                            'showButtonPanel' => true,
+                        ],
                     ])->label(false) ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($model, 'created_date_to')->widget(DatePicker::classname(), [
-                        'options' => ['placeholder' => 'Đến ngày'],
-                        'pluginOptions' => [
-                            'autoclose' => true,
-                            'format' => 'yyyy-mm-dd'
-                        ]
+                    <?= $form->field($model, 'created_date_to')->widget(DatePicker::className(), [
+                        'language' => 'vi',
+                        'dateFormat' => 'yyyy-MM-dd',
+                        'options' => [
+                            'class' => 'form-control',
+                            'placeholder' => 'Đến ngày'
+                        ],
+                        'clientOptions' => [
+                            'changeMonth' => true,
+                            'changeYear' => true,
+                            'showButtonPanel' => true,
+                        ],
                     ])->label(false) ?>
                 </div>
             </div>

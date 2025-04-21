@@ -1,206 +1,237 @@
-/* Tùy chỉnh CSS cho adminLTE */
+/* Custom styling for modern UI */
 
-/* Màu chủ đạo */
-:root {
-    --primary-color: #3c8dbc;
-    --secondary-color: #f39c12;
-    --success-color: #00a65a;
-    --info-color: #00c0ef;
-    --warning-color: #f39c12;
-    --danger-color: #f56954;
-    --light-color: #f8f9fa;
-    --dark-color: #343a40;
+/* General styling */
+body {
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: 14px;
 }
 
-/* Logo và Brand */
-.brand-link {
-    padding: 0.8rem 0.5rem;
-}
-
-.brand-link .brand-image {
-    margin-top: -5px;
-}
-
-/* Sidebar */
+/* Sidebar styling */
 .sidebar-dark-primary {
-    background-color: #343a40;
+    background: linear-gradient(180deg, #343a40 0%, #222529 100%);
 }
 
-.sidebar-dark-primary .nav-sidebar>.nav-item>.nav-link.active {
-    background-color: var(--primary-color);
+.sidebar-dark-primary .nav-sidebar .nav-item .nav-link.active {
+    background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
-/* Main Header */
-.navbar-white {
-    background-color: #ffffff;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+.sidebar-dark-primary .user-panel .info span.badge {
+    font-size: 9px;
+    padding: 3px 6px;
+    margin-top: 3px;
+    display: inline-block;
 }
 
-/* Cards */
+.nav-sidebar .nav-item .nav-link {
+    padding: 10px 16px;
+    border-radius: 5px;
+    margin: 2px 8px;
+    transition: all 0.3s;
+}
+
+.nav-sidebar .nav-item .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-dark-primary .brand-link {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Card styling */
 .card {
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    border: none;
+    transition: all 0.3s;
     margin-bottom: 1.5rem;
 }
 
-.card-primary.card-outline {
-    border-top: 3px solid var(--primary-color);
-}
-
-.card-success.card-outline {
-    border-top: 3px solid var(--success-color);
-}
-
-.card-info.card-outline {
-    border-top: 3px solid var(--info-color);
-}
-
-.card-warning.card-outline {
-    border-top: 3px solid var(--warning-color);
-}
-
-.card-danger.card-outline {
-    border-top: 3px solid var(--danger-color);
-}
-
-/* Nút nhấn */
-.btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-    background-color: #3071a9;
-    border-color: #2d6da3;
-}
-
-/* Info boxes */
-.info-box {
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
-}
-
-.info-box:hover {
+.card:hover {
     transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Bảng */
-.table-striped tbody tr:nth-of-type(odd) {
-    background-color: rgba(0, 0, 0, 0.03);
+.card-header {
+    padding: 1rem 1.25rem;
+}
+
+.card-title {
+    font-weight: 600;
+}
+
+/* Dashboard cards styling */
+.small-box {
+    transition: all 0.3s;
+}
+
+.small-box:hover {
+    transform: translateY(-5px);
+}
+
+.small-box .icon {
+    font-size: 70px;
+    top: 10px;
+    right: 15px;
+}
+
+.small-box .small-box-footer {
+    border-bottom-left-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+}
+
+/* Table styling */
+.table thead th {
+    border-top: none;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
 }
 
 .table-hover tbody tr:hover {
-    background-color: rgba(0, 0, 0, 0.075);
+    background-color: rgba(0, 123, 255, 0.05);
 }
 
-/* Phiên bản điện thoại */
-@media (max-width: 767.98px) {
-    .main-sidebar {
-        box-shadow: none;
-    }
-    
-    .content-wrapper {
-        padding-top: 0.5rem;
-    }
-    
-    .info-box {
-        margin-bottom: 0.5rem;
-    }
-    
-    .card {
-        margin-bottom: 1rem;
-    }
-}
-
-/* Dashboard widgets */
-.products-list .product-img {
-    float: left;
-}
-
-.products-list .product-info {
-    margin-left: 60px;
-}
-
-.product-description {
-    display: block;
-    color: #6c757d;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Badges */
+/* Badge styling */
 .badge {
-    font-weight: 400;
-    padding: 0.35em 0.65em;
+    padding: 0.4em 0.6em;
+    font-weight: 500;
+    border-radius: 0.25rem;
 }
 
-/* Footer */
-.main-footer {
-    font-size: 0.9rem;
-    padding: 0.8rem;
-    border-top: 1px solid #dee2e6;
+/* Progress bar styling */
+.progress {
+    border-radius: 50px;
+    background-color: #f2f2f2;
 }
 
-/* Preloader */
-.preloader {
-    background-color: rgba(255, 255, 255, 0.8);
+.progress-bar {
+    border-radius: 50px;
 }
 
-.animation__shake {
-    animation: shake 1.5s;
+/* Product list styling */
+.products-list .item {
+    padding: 12px;
+    border-bottom: 1px solid #f4f4f4;
 }
 
-@keyframes shake {
-    0% { transform: rotate(0deg); }
-    25% { transform: rotate(-5deg); }
-    50% { transform: rotate(5deg); }
-    75% { transform: rotate(-5deg); }
-    100% { transform: rotate(0deg); }
+.products-list .item:last-child {
+    border-bottom: none;
 }
 
-/* User dropdown menu */
-.navbar-nav .user-menu .dropdown-menu {
-    width: 250px;
+.products-list .product-title {
+    font-weight: 600;
 }
 
-.navbar-nav .user-menu .user-header {
-    text-align: center;
-    padding: 10px;
-    background-color: var(--primary-color);
+/* Timeline styling */
+.timeline-item {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 0.25rem;
 }
 
-.navbar-nav .user-menu .user-header p {
-    color: #fff;
-    margin-top: 10px;
-    margin-bottom: 0;
+.timeline-item .timeline-header {
+    font-weight: 600;
 }
 
-.navbar-nav .user-menu .user-header small {
-    font-size: 80%;
-    display: block;
-    color: rgba(255, 255, 255, 0.8);
+/* Navbar styling */
+.navbar-white {
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Breadcrumb */
+/* Button styling */
+.btn {
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.btn-tool {
+    color: #6c757d;
+}
+
+/* Chart styling */
+.chart {
+    min-height: 250px;
+    height: 250px;
+    max-height: 350px;
+    margin: 0 auto;
+}
+
+/* Breadcrumbs styling */
 .breadcrumb {
+    padding: 0.5rem 1rem;
     background-color: transparent;
-    padding: 0;
-    margin-bottom: 0;
+    border-radius: 0.25rem;
 }
 
-/* Custom scrollbar for sidebar */
-.sidebar::-webkit-scrollbar {
-    width: 5px;
+.breadcrumb-item a {
+    color: #007bff;
 }
 
-.sidebar::-webkit-scrollbar-track {
-    background: #f1f1f1;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
 }
 
-.sidebar::-webkit-scrollbar-thumb {
-    background: #888;
+/* CSS tùy chỉnh cho trang đăng nhập */
+.login-page {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
-.sidebar::-webkit-scrollbar-thumb:hover {
-    background: #555;
+.login-box {
+    z-index: 2;
+}
+
+.login-box-msg {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.login-logo a {
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-logo img {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.login-card-body {
+    border-radius: 8px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+}
+
+.input-group-text {
+    border-left: none;
+    background-color: white;
+}
+
+.form-control:focus + .input-group-append .input-group-text {
+    border-color: #80bdff;
+}
+
+/* Hiệu ứng di chuột */
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+/* Animation cho trang đăng nhập */
+.login-box {
+    animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

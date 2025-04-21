@@ -4,10 +4,6 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\grid\GridView;
 use yii\widgets\Pjax;
-use kartik\select2\Select2;
-use kartik\date\DatePicker;
-use yii\helpers\ArrayHelper;
-use common\models\Supplier;
 
 /* @var $this yii\web\View */
 /* @var $searchModel common\models\SupplierDebtSearch */
@@ -82,7 +78,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     'attribute' => 'reference_type',
                     'format' => 'raw',
                     'value' => function ($model) {
-                        return $model->getReferenceInfo();
+                        return $model->getReferenceLabel();
                     },
                 ],
                 [

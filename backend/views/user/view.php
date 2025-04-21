@@ -3,12 +3,14 @@
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 use common\models\User;
+use common\models\LoginHistory;
 
 /* @var $this yii\web\View */
 /* @var $model common\models\User */
 /* @var $profile common\models\UserProfile */
 /* @var $assignedWarehouses array */
 /* @var $roles array */
+/* @var $permissions array */
 /* @var $warehouses array */
 
 $this->title = $model->full_name;
@@ -21,6 +23,8 @@ $this->params['breadcrumbs'][] = $this->title;
     <div class="mb-3">
         <?= Html::a('<i class="fas fa-arrow-left"></i> Quay lại', ['index'], ['class' => 'btn btn-secondary']) ?>
         <?= Html::a('<i class="fas fa-edit"></i> Cập nhật', ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
+        <?= Html::a('<i class="fas fa-user-tag"></i> Phân quyền', ['assign-role', 'id' => $model->id], ['class' => 'btn btn-warning']) ?>
+        <?= Html::a('<i class="fas fa-unlock-alt"></i> Quản lý quyền hạn', ['manage-permissions', 'id' => $model->id], ['class' => 'btn btn-info']) ?>
         <?= Html::a('<i class="fas fa-key"></i> Đặt lại mật khẩu', ['reset-password', 'id' => $model->id], [
             'class' => 'btn btn-warning',
             'data' => [
@@ -37,7 +41,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 ],
             ]) ?>
         <?php endif; ?>
-        <?= Html::a('<i class="fas fa-history"></i> Lịch sử đăng nhập', ['login-history', 'id' => $model->id], ['class' => 'btn btn-info']) ?>
+        <?= Html::a('<i class="fas fa-history"></i> Lịch sử đăng nhập', ['login-history', 'id' => $model->id], ['class' => 'btn btn-secondary']) ?>
     </div>
 
     <div class="row">
@@ -52,11 +56,13 @@ $this->params['breadcrumbs'][] = $this->title;
                         <?php if ($model->avatar): ?>
                             <img class="profile-user-img img-fluid img-circle" 
                                  src="<?= Yii::getAlias('@web/' . $model->avatar) ?>" 
-                                 alt="Ảnh đại diện">
+                                 alt="Ảnh đại diện"
+                                 style="width: 100px; height: 100px; object-fit: cover;">
                         <?php else: ?>
                             <img class="profile-user-img img-fluid img-circle" 
                                  src="<?= Yii::getAlias('@web/dist/img/avatar5.png') ?>" 
-                                 alt="Ảnh đại diện mặc định">
+                                 alt="Ảnh đại diện mặc định"
+                                 style="width: 100px; height: 100px; object-fit: cover;">
                         <?php endif; ?>
                         <h3 class="profile-username text-center"><?= Html::encode($model->full_name) ?></h3>
                         <p class="text-muted text-center"><?= $profile->position ?: 'Chưa có chức vụ' ?></p>
@@ -86,6 +92,12 @@ $this->params['breadcrumbs'][] = $this->title;
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Vai trò người dùng</h3>
+                    <div class="card-tools">
+                        <?= Html::a('<i class="fas fa-edit"></i>', ['assign-role', 'id' => $model->id], [
+                            'class' => 'btn btn-tool',
+                            'title' => 'Chỉnh sửa vai trò',
+                        ]) ?>
+                    </div>
                 </div>
                 <div class="card-body">
                     <?php if (count($roles) > 0): ?>
@@ -100,6 +112,42 @@ $this->params['breadcrumbs'][] = $this->title;
                     <?php else: ?>
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle"></i> Người dùng chưa được gán vai trò nào
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Thông tin quyền hạn -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Quyền hạn</h3>
+                    <div class="card-tools">
+                        <?= Html::a('<i class="fas fa-edit"></i>', ['manage-permissions', 'id' => $model->id], [
+                            'class' => 'btn btn-tool',
+                            'title' => 'Quản lý quyền hạn',
+                        ]) ?>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <?php if (isset($permissions) && count($permissions) > 0): ?>
+                        <div class="form-group">
+                            <input type="text" class="form-control mb-2" id="search-permissions" placeholder="Tìm kiếm quyền...">
+                        </div>
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            <ul class="list-group permission-list">
+                                <?php foreach ($permissions as $permission): ?>
+                                    <li class="list-group-item">
+                                        <span class="badge badge-info"><?= $permission->name ?></span>
+                                        <?php if (!empty($permission->description)): ?>
+                                            <small class="text-muted d-block"><?= $permission->description ?></small>
+                                        <?php endif; ?>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php else: ?>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Người dùng chưa có quyền hạn nào
                         </div>
                     <?php endif; ?>
                 </div>
@@ -289,6 +337,72 @@ $this->params['breadcrumbs'][] = $this->title;
                     </div>
                 </div>
             </div>
+
+            <!-- Lịch sử đăng nhập gần đây -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Lịch sử đăng nhập gần đây</h3>
+                    <div class="card-tools">
+                        <?= Html::a('Xem tất cả <i class="fas fa-arrow-right"></i>', ['login-history', 'id' => $model->id], [
+                            'class' => 'btn btn-tool',
+                            'title' => 'Xem tất cả lịch sử',
+                        ]) ?>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Thời gian</th>
+                                <th>Địa chỉ IP</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php 
+                            $recentLogins = LoginHistory::find()
+                                ->where(['user_id' => $model->id])
+                                ->orderBy(['login_time' => SORT_DESC])
+                                ->limit(5)
+                                ->all();
+                                
+                            if (count($recentLogins) > 0):
+                                foreach ($recentLogins as $login):
+                            ?>
+                                <tr>
+                                    <td><?= Yii::$app->formatter->asDatetime($login->login_time, 'php:d/m/Y H:i:s') ?></td>
+                                    <td><?= $login->ip_address ?></td>
+                                    <td>
+                                        <?= $login->success 
+                                            ? '<span class="badge badge-success">Thành công</span>' 
+                                            : '<span class="badge badge-danger">Thất bại</span>' ?>
+                                    </td>
+                                </tr>
+                            <?php 
+                                endforeach;
+                            else:
+                            ?>
+                                <tr>
+                                    <td colspan="3" class="text-center">Không có lịch sử đăng nhập</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<?php
+$js = <<<JS
+// Tìm kiếm quyền hạn
+$("#search-permissions").on("keyup", function() {
+    var value = $(this).val().toLowerCase();
+    $(".permission-list li").filter(function() {
+        $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+    });
+});
+JS;
+$this->registerJs($js);
+?>

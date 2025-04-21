@@ -4,7 +4,7 @@ namespace backend\controllers;
 use Yii;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
+use common\components\AccessControl; 
 use common\models\LoginForm;
 use common\models\Order;
 use common\models\Product;
@@ -309,7 +309,7 @@ class SiteController extends Controller
             return $this->goHome();
         }
 
-        $this->layout = 'blank';
+        $this->layout = 'blank'; // Sử dụng layout blank cho trang login
 
         $model = new LoginForm();
         if ($model->load(Yii::$app->request->post()) && $model->login()) {

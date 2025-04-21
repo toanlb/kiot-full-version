@@ -12,7 +12,7 @@ use yii\data\ActiveDataProvider;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
+use common\components\AccessControl; // Thay thế AccessControl của Yii2
 use yii\helpers\ArrayHelper;
 use yii\web\UploadedFile;
 use yii\web\Response;
@@ -32,9 +32,20 @@ class UserController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'actions' => ['index', 'view', 'create', 'update', 'delete', 'login-history', 'reset-password'],
-                        'allow' => true,
-                        'roles' => ['admin'],
+                        'actions' => ['index', 'view'],
+                        'permissions' => ['manageUsers', 'admin'],
+                    ],
+                    [
+                        'actions' => ['create', 'update', 'delete', 'reset-password'],
+                        'permissions' => ['manageUsers', 'admin'],
+                    ],
+                    [
+                        'actions' => ['assign-role', 'manage-permissions'],
+                        'permissions' => ['manageRoles', 'admin'],
+                    ],
+                    [
+                        'actions' => ['login-history'],
+                        'permissions' => ['viewLogs', 'admin'],
                     ],
                 ],
             ],
@@ -43,6 +54,7 @@ class UserController extends Controller
                 'actions' => [
                     'delete' => ['POST'],
                     'reset-password' => ['POST'],
+                    // Xóa phương thức assign-role khỏi danh sách POST
                 ],
             ],
         ];
@@ -92,6 +104,9 @@ class UserController extends Controller
         $auth = Yii::$app->authManager;
         $roles = $auth->getRolesByUser($id);
         
+        // Get all permissions for user
+        $permissions = $auth->getPermissionsByUser($id);
+        
         // Get all warehouses
         $warehouses = Warehouse::find()->where(['is_active' => 1])->all();
         
@@ -100,6 +115,7 @@ class UserController extends Controller
             'profile' => $profile,
             'assignedWarehouses' => $assignedWarehouses,
             'roles' => $roles,
+            'permissions' => $permissions,
             'warehouses' => $warehouses,
         ]);
     }
@@ -151,6 +167,27 @@ class UserController extends Controller
                     // Save profile
                     $profile->user_id = $model->id;
                     $profile->save();
+                    
+                    // Save assigned warehouses
+                    if (is_array($model->warehouses)) {
+                        foreach ($model->warehouses as $warehouseId) {
+                            $userWarehouse = new UserWarehouse();
+                            $userWarehouse->user_id = $model->id;
+                            $userWarehouse->warehouse_id = $warehouseId;
+                            $userWarehouse->created_at = date('Y-m-d H:i:s');
+                            $userWarehouse->save();
+                        }
+                    }
+                    
+                    // Assign roles
+                    if (is_array($model->roles)) {
+                        foreach ($model->roles as $roleName) {
+                            $role = $auth->getRole($roleName);
+                            if ($role) {
+                                $auth->assign($role, $model->id);
+                            }
+                        }
+                    }
                     
                     // Upload avatar file if exists
                     if ($avatarFile) {
@@ -230,6 +267,29 @@ class UserController extends Controller
                     // Save profile
                     $profile->user_id = $model->id;
                     $profile->save();
+                    
+                    // Update assigned warehouses
+                    UserWarehouse::deleteAll(['user_id' => $id]);
+                    if (is_array($model->warehouses)) {
+                        foreach ($model->warehouses as $warehouseId) {
+                            $userWarehouse = new UserWarehouse();
+                            $userWarehouse->user_id = $model->id;
+                            $userWarehouse->warehouse_id = $warehouseId;
+                            $userWarehouse->created_at = date('Y-m-d H:i:s');
+                            $userWarehouse->save();
+                        }
+                    }
+                    
+                    // Update roles
+                    $auth->revokeAll($id);
+                    if (is_array($model->roles)) {
+                        foreach ($model->roles as $roleName) {
+                            $role = $auth->getRole($roleName);
+                            if ($role) {
+                                $auth->assign($role, $model->id);
+                            }
+                        }
+                    }
                     
                     // Upload avatar file if exists
                     if ($avatarFile) {
@@ -330,6 +390,101 @@ class UserController extends Controller
         return $this->render('login-history', [
             'dataProvider' => $dataProvider,
             'user' => $model,
+        ]);
+    }
+
+    /**
+     * Assign roles to user
+     * @param integer $id
+     * @return mixed
+     * @throws NotFoundHttpException if the model cannot be found
+     */
+    public function actionAssignRole($id)
+    {
+        $model = $this->findModel($id);
+        $auth = Yii::$app->authManager;
+        $allRoles = $auth->getRoles();
+        $userRoles = $auth->getRolesByUser($id);
+        
+        if (Yii::$app->request->isPost) {
+            $roles = Yii::$app->request->post('roles', []);
+            
+            // Revoke all current roles
+            $auth->revokeAll($id);
+            
+            // Assign new roles
+            foreach ($roles as $roleName) {
+                $role = $auth->getRole($roleName);
+                if ($role) {
+                    $auth->assign($role, $id);
+                }
+            }
+            
+            Yii::$app->session->setFlash('success', 'Phân quyền người dùng đã được cập nhật.');
+            return $this->redirect(['view', 'id' => $model->id]);
+        }
+        
+        return $this->render('assign-role', [
+            'model' => $model,
+            'allRoles' => $allRoles,
+            'userRoles' => $userRoles,
+        ]);
+    }
+
+    /**
+     * Manage user permissions
+     * @param integer $id
+     * @return mixed
+     * @throws NotFoundHttpException if the model cannot be found
+     */
+    public function actionManagePermissions($id)
+    {
+        $model = $this->findModel($id);
+        $auth = Yii::$app->authManager;
+        $allPermissions = $auth->getPermissions();
+        $userPermissions = $auth->getPermissionsByUser($id);
+        
+        // Lấy các quyền trực tiếp của user
+        $directPermissions = [];
+        foreach ($auth->getAssignments($id) as $name => $assignment) {
+            $permission = $auth->getPermission($name);
+            if ($permission) {
+                $directPermissions[$name] = $permission;
+            }
+        }
+        
+        if (Yii::$app->request->isPost) {
+            $newDirectPermissions = Yii::$app->request->post('permissions', []);
+            
+            // Xóa tất cả quyền trực tiếp hiện tại
+            foreach ($directPermissions as $name => $permission) {
+                $auth->revoke($permission, $id);
+            }
+            
+            // Gán quyền trực tiếp mới
+            foreach ($newDirectPermissions as $permissionName) {
+                $permission = $auth->getPermission($permissionName);
+                if ($permission) {
+                    $auth->assign($permission, $id);
+                }
+            }
+            
+            Yii::$app->session->setFlash('success', 'Quyền hạn người dùng đã được cập nhật.');
+            return $this->redirect(['view', 'id' => $model->id]);
+        }
+        
+        // Nhóm quyền theo danh mục
+        $groupedPermissions = [];
+        foreach ($allPermissions as $permission) {
+            $category = explode('-', $permission->name)[0] ?? 'other';
+            $groupedPermissions[$category][] = $permission;
+        }
+        
+        return $this->render('manage-permissions', [
+            'model' => $model,
+            'groupedPermissions' => $groupedPermissions,
+            'userPermissions' => $userPermissions,
+            'directPermissions' => $directPermissions,
         ]);
     }
 

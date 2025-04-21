@@ -7,7 +7,7 @@ use yii\widgets\DetailView;
 /* @var $model common\models\SupplierDebt */
 
 $this->title = 'Chi tiết công nợ #' . $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'Quản lý công nợ nhà cung cấp', 'url' => ['index']];
+$this->params['breadcrumbs'][] = ['label' => 'Công nợ nhà cung cấp', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 \yii\web\YiiAsset::register($this);
 ?>
@@ -25,74 +25,40 @@ $this->params['breadcrumbs'][] = $this->title;
                 'id',
                 [
                     'attribute' => 'supplier_id',
-                    'value' => function ($model) {
-                        return $model->supplier->code . ' - ' . $model->supplier->name;
-                    },
-                    'format' => 'raw',
+                    'value' => $model->supplier->name . ' (' . $model->supplier->code . ')',
                 ],
                 [
                     'attribute' => 'type',
+                    'value' => $model->getTypeLabel(),
                     'format' => 'raw',
-                    'value' => function ($model) {
-                        return $model->getTypeLabel();
-                    },
                 ],
                 [
                     'attribute' => 'amount',
-                    'format' => 'currency',
+                    'value' => Yii::$app->formatter->asCurrency($model->amount),
                 ],
                 [
                     'attribute' => 'balance',
-                    'format' => 'currency',
+                    'value' => Yii::$app->formatter->asCurrency($model->balance),
+                ],
+                [
+                    'attribute' => 'transaction_date',
+                    'format' => 'datetime',
                 ],
                 'description:ntext',
-                'transaction_date:datetime',
                 [
                     'attribute' => 'reference_type',
+                    'value' => $model->getReferenceLabel(),
                     'format' => 'raw',
-                    'value' => function ($model) {
-                        return $model->getReferenceInfo();
-                    },
                 ],
-                'created_at:datetime',
+                [
+                    'attribute' => 'created_at',
+                    'format' => 'datetime',
+                ],
                 [
                     'attribute' => 'created_by',
-                    'value' => function ($model) {
-                        return $model->createdBy ? $model->createdBy->username : 'N/A';
-                    },
+                    'value' => $model->createdBy ? $model->createdBy->username : null,
                 ],
             ],
         ]) ?>
-    </div>
-</div>
-
-<div class="card mt-3">
-    <div class="card-header bg-primary text-white">
-        <h3 class="card-title">Thông tin nhà cung cấp</h3>
-    </div>
-    <div class="card-body">
-        <?= DetailView::widget([
-            'model' => $model->supplier,
-            'attributes' => [
-                'code',
-                'name',
-                'phone',
-                'email:email',
-                [
-                    'attribute' => 'debt_amount',
-                    'format' => 'currency',
-                ],
-                [
-                    'attribute' => 'credit_limit',
-                    'format' => 'currency',
-                ],
-                'payment_term',
-            ],
-        ]) ?>
-        
-        <div class="mt-3">
-            <?= Html::a('<i class="fas fa-user"></i> Xem nhà cung cấp', ['/supplier/view', 'id' => $model->supplier_id], ['class' => 'btn btn-info']) ?>
-            <?= Html::a('<i class="fas fa-money-bill-wave"></i> Thanh toán công nợ', ['payment', 'supplier_id' => $model->supplier_id], ['class' => 'btn btn-success']) ?>
-        </div>
     </div>
 </div>

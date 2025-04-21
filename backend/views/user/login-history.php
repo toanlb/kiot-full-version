@@ -15,42 +15,54 @@ $this->params['breadcrumbs'][] = 'Lịch sử đăng nhập';
 ?>
 <div class="login-history-index">
 
-    <h1><?= Html::encode($this->title) ?></h1>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><?= Html::encode($this->title) ?></h3>
+            <div class="card-tools">
+                <?= Html::a('<i class="fas fa-arrow-left"></i> Quay lại', ['view', 'id' => $user->id], ['class' => 'btn btn-default btn-sm']) ?>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <?php Pjax::begin(); ?>
 
-    <p>
-        <?= Html::a('Quay lại', ['view', 'id' => $user->id], ['class' => 'btn btn-default']) ?>
-    </p>
-
-    <?php Pjax::begin(); ?>
-
-    <div class="box">
-        <div class="box-body table-responsive">
             <?= GridView::widget([
                 'dataProvider' => $dataProvider,
+                'layout' => "{summary}\n{items}\n{pager}",
+                'tableOptions' => ['class' => 'table table-striped table-bordered'],
                 'columns' => [
                     ['class' => 'yii\grid\SerialColumn'],
                     [
                         'attribute' => 'login_time',
-                        'format' => 'datetime',
+                        'format' => 'raw',
+                        'value' => function ($model) {
+                            return Yii::$app->formatter->asDatetime($model->login_time, 'php:d/m/Y H:i:s');
+                        }
                     ],
                     [
                         'attribute' => 'logout_time',
-                        'format' => 'datetime',
+                        'format' => 'raw',
                         'value' => function ($model) {
-                            return $model->logout_time ?: '(Chưa đăng xuất)';
+                            return $model->logout_time
+                                ? Yii::$app->formatter->asDatetime($model->logout_time, 'php:d/m/Y H:i:s')
+                                : '<span class="badge badge-warning">Chưa đăng xuất</span>';
                         }
                     ],
                     'ip_address',
                     [
                         'attribute' => 'user_agent',
                         'format' => 'ntext',
-                        'contentOptions' => ['style' => 'max-width: 300px; overflow: hidden; text-overflow: ellipsis;'],
+                        'contentOptions' => ['style' => 'max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;'],
                     ],
                     [
                         'attribute' => 'success',
-                        'format' => 'boolean',
+                        'format' => 'raw',
+                        'value' => function ($model) {
+                            return $model->success
+                                ? '<span class="badge badge-success">Thành công</span>'
+                                : '<span class="badge badge-danger">Thất bại</span>';
+                        },
                         'contentOptions' => function ($model) {
-                            return ['class' => $model->success ? 'success' : 'danger'];
+                            return ['class' => $model->success ? 'text-success' : 'text-danger'];
                         }
                     ],
                     [
@@ -59,11 +71,35 @@ $this->params['breadcrumbs'][] = 'Lịch sử đăng nhập';
                             return !$model->success;
                         }
                     ],
+                    [
+                        'attribute' => 'duration',
+                        'label' => 'Thời gian phiên',
+                        'format' => 'raw',
+                        'value' => function ($model) {
+                            if (!$model->logout_time || !$model->success) {
+                                return '-';
+                            }
+                            
+                            $loginTime = strtotime($model->login_time);
+                            $logoutTime = strtotime($model->logout_time);
+                            $duration = $logoutTime - $loginTime;
+                            
+                            if ($duration < 60) {
+                                return $duration . ' giây';
+                            } elseif ($duration < 3600) {
+                                return floor($duration / 60) . ' phút ' . ($duration % 60) . ' giây';
+                            } else {
+                                $hours = floor($duration / 3600);
+                                $minutes = floor(($duration % 3600) / 60);
+                                return $hours . ' giờ ' . $minutes . ' phút';
+                            }
+                        }
+                    ],
                 ],
             ]); ?>
+
+            <?php Pjax::end(); ?>
         </div>
     </div>
-
-    <?php Pjax::end(); ?>
 
 </div>
