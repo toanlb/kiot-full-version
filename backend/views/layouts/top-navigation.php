@@ -10,6 +10,7 @@
 $currentUrl = Yii::$app->controller->id;
 $currentAction = Yii::$app->controller->action->id;
 $currentRoute = $currentUrl . '/' . $currentAction;
+$currentUserId = Yii::$app->user->id;
 
 // Định nghĩa các nhóm menu và các menu con
 $menuGroups = [
@@ -32,6 +33,32 @@ foreach ($menuGroups as $group => $items) {
         $activeGroup = $group;
         break;
     }
+}
+
+// Helper function to check if user has access to a controller
+function userHasAccess($controller) {
+    try {
+        // Check if user has permission using Yii2's access control
+        // This is a simplified example - you'll need to adapt it to your actual ACL implementation
+        return Yii::$app->user->can('access-' . $controller) || Yii::$app->user->identity->isAdmin;
+    } catch (\Exception $e) {
+        // In case of any errors, better to show menu item than hide it
+        return true;
+    }
+}
+
+// Get current user's roles for permission checking
+$userRoles = [];
+try {
+    if (!Yii::$app->user->isGuest) {
+        // Get assigned roles - this depends on your RBAC implementation
+        $auth = Yii::$app->authManager;
+        if ($auth) {
+            $userRoles = $auth->getRolesByUser(Yii::$app->user->id);
+        }
+    }
+} catch (\Exception $e) {
+    // Silently fail - don't break the navigation
 }
 ?>
 
@@ -57,6 +84,7 @@ foreach ($menuGroups as $group => $items) {
                 </li>
                 
                 <!-- Quản lý sản phẩm -->
+                <?php if (userHasAccess('product')): ?>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle <?= $activeGroup === 'product' ? 'active' : '' ?>" href="#" id="productDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-box mr-1"></i> Sản phẩm
@@ -80,8 +108,10 @@ foreach ($menuGroups as $group => $items) {
                         </a>
                     </div>
                 </li>
+                <?php endif; ?>
                 
                 <!-- Quản lý kho -->
+                <?php if (userHasAccess('warehouse')): ?>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle <?= $activeGroup === 'warehouse' ? 'active' : '' ?>" href="#" id="warehouseDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-warehouse mr-1"></i> Kho hàng
@@ -112,8 +142,10 @@ foreach ($menuGroups as $group => $items) {
                         </a>
                     </div>
                 </li>
+                <?php endif; ?>
                 
                 <!-- Nhà cung cấp -->
+                <?php if (userHasAccess('supplier')): ?>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle <?= $activeGroup === 'supplier' ? 'active' : '' ?>" href="#" id="supplierDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-truck mr-1"></i> Nhà cung cấp
@@ -134,8 +166,10 @@ foreach ($menuGroups as $group => $items) {
                         </a>
                     </div>
                 </li>
+                <?php endif; ?>
                 
                 <!-- Khách hàng -->
+                <?php if (userHasAccess('customer')): ?>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle <?= $activeGroup === 'customer' ? 'active' : '' ?>" href="#" id="customerDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-users mr-1"></i> Khách hàng
@@ -156,8 +190,10 @@ foreach ($menuGroups as $group => $items) {
                         </a>
                     </div>
                 </li>
+                <?php endif; ?>
                 
                 <!-- Đơn hàng -->
+                <?php if (userHasAccess('order')): ?>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle <?= $activeGroup === 'order' ? 'active' : '' ?>" href="#" id="orderDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-shopping-cart mr-1"></i> Đơn hàng
@@ -181,8 +217,10 @@ foreach ($menuGroups as $group => $items) {
                         </a>
                     </div>
                 </li>
+                <?php endif; ?>
                 
                 <!-- Báo cáo -->
+                <?php if (userHasAccess('report')): ?>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle <?= $activeGroup === 'report' ? 'active' : '' ?>" href="#" id="reportDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-chart-bar mr-1"></i> Báo cáo
@@ -206,23 +244,29 @@ foreach ($menuGroups as $group => $items) {
                         </a>
                     </div>
                 </li>
+                <?php endif; ?>
                 
                 <!-- Người dùng và Cài đặt -->
+                <?php if (userHasAccess('user') || userHasAccess('setting')): ?>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle <?= $activeGroup === 'user' || $activeGroup === 'setting' ? 'active' : '' ?>" href="#" id="settingsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-cogs mr-1"></i> Hệ thống
                     </a>
                     <div class="dropdown-menu animate slideIn" aria-labelledby="settingsDropdown">
+                        <?php if (userHasAccess('user')): ?>
                         <h6 class="dropdown-header">Quản lý người dùng</h6>
                         <a class="dropdown-item <?= $currentUrl === 'user' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/user']) ?>">
                             <i class="fas fa-users-cog mr-2"></i> Danh sách người dùng
                         </a>
-                        <a class="dropdown-item <?= $currentUrl === 'user-profile' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/user-profile']) ?>">
+                        <a class="dropdown-item <?= $currentUrl === 'user-profile' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/user/view?id='.$currentUserId]) ?>">
                             <i class="fas fa-id-card mr-2"></i> Hồ sơ người dùng
                         </a>
-                        <a class="dropdown-item <?= $currentUrl === 'auth' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/auth']) ?>">
+                        <a class="dropdown-item <?= $currentUrl === 'auth' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/rbac']) ?>">
                             <i class="fas fa-lock mr-2"></i> Phân quyền
                         </a>
+                        <?php endif; ?>
+
+                        <?php if (userHasAccess('setting')): ?>
                         <div class="dropdown-divider"></div>
                         <h6 class="dropdown-header">Cài đặt hệ thống</h6>
                         <a class="dropdown-item <?= $currentUrl === 'setting' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/setting']) ?>">
@@ -231,8 +275,10 @@ foreach ($menuGroups as $group => $items) {
                         <a class="dropdown-item <?= $currentUrl === 'log' ? 'active' : '' ?>" href="<?= \yii\helpers\Url::to(['/log']) ?>">
                             <i class="fas fa-history mr-2"></i> Nhật ký hệ thống
                         </a>
+                        <?php endif; ?>
                     </div>
                 </li>
+                <?php endif; ?>
             </ul>
             
             <!-- Right navbar links -->
@@ -245,26 +291,41 @@ foreach ($menuGroups as $group => $items) {
                     </a>
                     <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right animate slideIn">
                         <span class="dropdown-item dropdown-header">Thao tác nhanh</span>
+                        
+                        <?php if (userHasAccess('product')): ?>
                         <div class="dropdown-divider"></div>
                         <a href="<?= \yii\helpers\Url::to(['/product/create']) ?>" class="dropdown-item">
                             <i class="fas fa-plus mr-2 text-success"></i> Thêm sản phẩm mới
                         </a>
+                        <?php endif; ?>
+                        
+                        <?php if (userHasAccess('order')): ?>
                         <div class="dropdown-divider"></div>
                         <a href="<?= \yii\helpers\Url::to(['/order/create']) ?>" class="dropdown-item">
                             <i class="fas fa-cart-plus mr-2 text-primary"></i> Tạo đơn hàng mới
                         </a>
+                        <?php endif; ?>
+                        
+                        <?php if (userHasAccess('warehouse')): ?>
                         <div class="dropdown-divider"></div>
                         <a href="<?= \yii\helpers\Url::to(['/stock-in/create']) ?>" class="dropdown-item">
                             <i class="fas fa-truck-loading mr-2 text-info"></i> Tạo phiếu nhập kho
                         </a>
+                        <?php endif; ?>
+                        
+                        <?php if (userHasAccess('customer')): ?>
                         <div class="dropdown-divider"></div>
                         <a href="<?= \yii\helpers\Url::to(['/customer/create']) ?>" class="dropdown-item">
                             <i class="fas fa-user-plus mr-2 text-warning"></i> Thêm khách hàng mới
                         </a>
+                        <?php endif; ?>
+                        
+                        <?php if (userHasAccess('order')): ?>
                         <div class="dropdown-divider"></div>
                         <a href="<?= \yii\helpers\Url::to(['/pos']) ?>" class="dropdown-item dropdown-footer bg-primary text-white">
                             <i class="fas fa-cash-register mr-2"></i> Màn hình bán hàng (POS)
                         </a>
+                        <?php endif; ?>
                     </div>
                 </li>
                 
@@ -315,7 +376,7 @@ foreach ($menuGroups as $group => $items) {
                         <li class="user-body">
                             <div class="row">
                                 <div class="col-4 text-center">
-                                    <a href="<?= \yii\helpers\Url::to(['/user/profile']) ?>" class="btn btn-default btn-flat btn-sm">Hồ sơ</a>
+                                    <a href="<?= \yii\helpers\Url::to(['/user/view?id='.$currentUserId]) ?>" class="btn btn-default btn-flat btn-sm">Hồ sơ</a>
                                 </div>
                                 <div class="col-4 text-center">
                                     <a href="<?= \yii\helpers\Url::to(['/user/settings']) ?>" class="btn btn-default btn-flat btn-sm">Cài đặt</a>
@@ -601,11 +662,31 @@ foreach ($menuGroups as $group => $items) {
     opacity: .3;
     transition: 0s;
 }
+
+/* Error page styling */
+.error-page {
+    width: 600px;
+    margin: 20px auto;
+    text-align: center;
+}
+
+.error-page > .headline {
+    font-size: 100px;
+    font-weight: 300;
+}
+
+.error-page > .error-content {
+    display: block;
+    margin-top: 30px;
+}
 </style>
 
 <script>
 // Ensure jQuery is loaded
 $(document).ready(function() {
+    // Initialize a counter for failed requests
+    window.failedRequests = window.failedRequests || {};
+    
     // Improved hover behavior for dropdown menus
     // Adding a delay before hiding the dropdown
     let timeout;
@@ -656,6 +737,49 @@ $(document).ready(function() {
 
     // Add ripple effect to buttons and menu items
     $('.btn, .nav-link, .dropdown-item').addClass('ripple');
+    
+    // Handle 403 Forbidden errors for AJAX requests
+    $(document).ajaxError(function(event, jqXHR, settings, thrownError) {
+        if (jqXHR.status === 403) {
+            // Get the URL that caused the 403
+            const url = settings.url;
+            
+            // Initialize error counter for this URL if not exists
+            if (typeof window.failedRequests[url] === 'undefined') {
+                window.failedRequests[url] = 0;
+            }
+            
+            // Increment counter
+            window.failedRequests[url]++;
+            
+            // If this URL has failed multiple times, show an error message
+            if (window.failedRequests[url] > 2) {
+                console.error('Multiple access denied errors for: ' + url);
+                // Optionally notify the user with a toast notification
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('Bạn không có quyền truy cập tính năng này.', 'Lỗi phân quyền');
+                }
+            }
+        }
+    });
+
+    // Handle clicks on menu items to prevent 403 errors
+    $('.dropdown-item, .nav-link:not(.dropdown-toggle)').on('click', function(e) {
+        // Get the href attribute
+        const href = $(this).attr('href');
+        
+        // Check if this URL has failed multiple times
+        if (typeof window.failedRequests[href] !== 'undefined' && window.failedRequests[href] > 2) {
+            e.preventDefault();
+            
+            // Show friendly error message
+            if (typeof toastr !== 'undefined') {
+                toastr.error('Bạn không có quyền truy cập tính năng này.', 'Lỗi phân quyền');
+            } else {
+                alert('Bạn không có quyền truy cập tính năng này.');
+            }
+        }
+    });
 
     // Auto-collapse navbar on click on mobile
     $('.nav-link').on('click', function() {
@@ -682,19 +806,6 @@ $(document).ready(function() {
             }
         });
     }
-    
-    // Dropdown items in mobile view
-    $('.dropdown-item').on('click', function() {
-        if ($(window).width() < 992) {
-            $('.navbar-toggler').click();
-        }
-    });
-    
-    // Add accessibility support
-    $('.dropdown-toggle').attr('aria-expanded', 'false');
-    $('.dropdown-toggle').on('click', function() {
-        $(this).attr('aria-expanded', $(this).parent().hasClass('show') ? 'true' : 'false');
-    });
     
     // Make dropdown menus keyboard navigable
     $('.dropdown-toggle').on('keydown', function(e) {

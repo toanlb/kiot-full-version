@@ -12,7 +12,7 @@ use yii\data\ActiveDataProvider;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use common\components\AccessControl; // Thay thế AccessControl của Yii2
+use common\components\AccessControl;// Thay thế AccessControl của Yii2
 use yii\helpers\ArrayHelper;
 use yii\web\UploadedFile;
 use yii\web\Response;
@@ -32,32 +32,40 @@ class UserController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'actions' => ['index', 'view'],
-                        'permissions' => ['manageUsers', 'admin'],
+                        'actions' => ['test'],
+                        'allow' => true,
+                        'roles' => ['?', '@'], // Cả khách và người dùng đã đăng nhập
                     ],
                     [
-                        'actions' => ['create', 'update', 'delete', 'reset-password'],
-                        'permissions' => ['manageUsers', 'admin'],
-                    ],
-                    [
-                        'actions' => ['assign-role', 'manage-permissions'],
-                        'permissions' => ['manageRoles', 'admin'],
-                    ],
-                    [
-                        'actions' => ['login-history'],
-                        'permissions' => ['viewLogs', 'admin'],
+                        'actions' => [
+                            'index', 'view', 'create', 'update', 'delete', 'reset-password',
+                            'assign-role', 'manage-permissions', 'login-history'
+                        ],
+                        'allow' => true,
+                        'roles' => ['admin'], // Chỉ admin
                     ],
                 ],
             ],
-            'verbs' => [
-                'class' => VerbFilter::className(),
-                'actions' => [
-                    'delete' => ['POST'],
-                    'reset-password' => ['POST'],
-                    // Xóa phương thức assign-role khỏi danh sách POST
-                ],
-            ],
+            // ...
         ];
+    }
+
+    public function actionTest(){
+        $auth = Yii::$app->authManager;
+        $userRoles = $auth->getRolesByUser(Yii::$app->user->id);
+        $userPermissions = $auth->getPermissionsByUser(Yii::$app->user->id);
+        
+        echo "<h3>Your Roles:</h3>";
+        foreach ($userRoles as $role) {
+            echo $role->name . "<br>";
+        }
+        
+        echo "<h3>Your Permissions:</h3>";
+        foreach ($userPermissions as $permission) {
+            echo $permission->name . "<br>";
+        }
+        
+        die;
     }
 
     /**
