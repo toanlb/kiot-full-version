@@ -408,3 +408,126 @@ Dự án được phân phối dưới giấy phép MIT. Xem thêm `LICENSE` đ�
 ---
 
 © 2025 Zplus Kiot. All rights reserved.
+
+## Tiến Độ Dự Án
+
+### 1. Frontend (POS - Bán Hàng)
+
+#### 1.1 Quản lý ca làm việc (✅ Hoàn thành)
+- Đăng nhập/đăng xuất ca
+- Khai báo tiền đầu ca
+- Kết ca và kiểm đếm
+- Báo cáo doanh số theo ca
+
+#### 1.2 Bán hàng POS (✅ Hoàn thành)
+- Giao diện bán hàng trực quan
+- Tìm kiếm sản phẩm nhanh
+- Quản lý giỏ hàng
+- Áp dụng giảm giá
+- Thanh toán đa hình thức
+- In hóa đơn
+
+#### 1.3 Bảo hành (✅ Hoàn thành)
+- In phiếu bảo hành
+- Quản lý thời hạn
+- Cập nhật trạng thái
+
+### 2. Backend (Quản Trị)
+
+#### 2.1 Quản lý sản phẩm (✅ Hoàn thành)
+- CRUD sản phẩm
+- Quản lý danh mục
+- Quản lý thuộc tính
+- Quản lý đơn vị tính
+- Quản lý combo/bộ
+- Upload hình ảnh
+
+#### 2.2 Quản lý kho (✅ Hoàn thành)
+- Quản lý nhiều kho
+- Nhập/xuất kho
+- Chuyển kho
+- Kiểm kê
+- Báo cáo tồn kho
+- Cảnh báo hết hàng
+
+#### 2.3 Quản lý khách hàng (✅ Hoàn thành)
+- CRUD khách hàng
+- Phân nhóm khách hàng
+- Tích điểm thành viên
+- Lịch sử mua hàng
+- Công nợ khách hàng
+
+#### 2.4 Quản lý nhà cung cấp (✅ Hoàn thành)
+- CRUD nhà cung cấp
+- Quản lý nợ cần trả
+- Lịch sử nhập hàng
+- Đánh giá nhà cung cấp
+
+#### 2.5 Báo cáo (✅ Hoàn thành)
+- Báo cáo doanh số
+- Báo cáo lợi nhuận
+- Báo cáo tồn kho
+- Báo cáo công nợ
+- Xuất báo cáo (PDF, Excel)
+
+#### 2.6 Phân quyền & Bảo mật (✅ Hoàn thành)
+- Quản lý người dùng
+- Phân quyền RBAC
+- Lịch sử đăng nhập
+- Nhật ký hoạt động
+
+### 3. Tính Năng Cần Phát Triển (⚠️ Đang phát triển)
+
+#### 3.1 Tích hợp thiết bị (🔄 Đang triển khai)
+- Kết nối máy in
+- Đọc mã vạch
+- Máy quét thẻ
+- Ngăn kéo tiền
+
+#### 3.2 API & Ứng dụng di động (⏳ Chưa triển khai)
+- REST API
+- Ứng dụng Android/iOS
+- Đồng bộ dữ liệu
+
+#### 3.3 CRM Nâng cao (⏳ Chưa triển khai)
+- Chăm sóc khách hàng
+- Marketing tự động
+- Khảo sát khách hàng
+- Phân tích hành vi
+
+#### 3.4 Bán hàng online (⏳ Chưa triển khai)
+- Website bán hàng
+- Quản lý đơn online
+- Tích hợp vận chuyển
+- Thanh toán trực tuyến
+
+### 4. Đánh Giá Chung
+
+#### 4.1 Điểm mạnh
+- Hệ thống POS hoạt động ổn định
+- Quản lý kho đa chi nhánh hiệu quả
+- Báo cáo chi tiết, trực quan
+- Phân quyền linh hoạt
+
+#### 4.2 Cần cải thiện
+- Tối ưu hiệu suất hệ thống
+- Cải thiện UX/UI
+- Tăng cường bảo mật
+- Hoàn thiện tài liệu
+
+## Kế Hoạch Phát Triển
+
+### Q3/2024
+- Hoàn thiện tích hợp thiết bị
+- Phát triển REST API cơ bản
+- Tối ưu hiệu suất hệ thống
+
+### Q4/2024
+- Phát triển ứng dụng di động
+- Triển khai CRM nâng cao
+- Cải thiện UX/UI
+
+### Q1/2025
+- Phát triển tính năng bán hàng online
+- Tích hợp các cổng thanh toán
+- Hoàn thiện tài liệu kỹ thuật
